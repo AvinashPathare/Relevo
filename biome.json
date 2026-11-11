@@ -10,10 +10,25 @@
       "!.cache",
       "!.superpowers",
       "!**/*.json",
-      "!docs"
+      "!docs",
+      "!**/*.md"
     ]
   },
-  "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 110 },
-  "linter": { "enabled": true, "rules": { "preset": "none" } },
-  "javascript": { "formatter": { "quoteStyle": "double" } }
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 110
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "none"
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double"
+    }
+  }
 }
