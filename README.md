@@ -24,7 +24,7 @@ A DAO votes once to pay a batch of contributors in Mexico. The USDC locks in a N
 
 ## Quick start
 
-Requirements: Node 22+ and pnpm 10. `make test` also needs Rust; `rust-toolchain.toml` pins 1.95.0, and you need [cargo-near](https://github.com/near/cargo-near) 0.23.
+Requirements: Node 22+ and pnpm 10, on macOS or a Linux with glibc 2.38 or newer (Ubuntu 24.04+, Debian 13+), which the local NEAR sandbox binary needs. `make test` also needs Rust; `rust-toolchain.toml` pins 1.95.0, and you need [cargo-near](https://github.com/near/cargo-near) 0.23.
 
 ```bash
 make setup   # pnpm install; fetch the Sputnik DAO wasm (hash-checked); generate local keys in .data/
