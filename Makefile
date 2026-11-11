@@ -6,7 +6,7 @@ RES := contracts/res
 REMAP := --remap-path-prefix=$(HOME)/.cargo/registry/src=/cargo/registry --remap-path-prefix=$(HOME)/.cargo/git=/cargo/git --remap-path-prefix=$(HOME)/.rustup=/rustup --remap-path-prefix=$(CURDIR)=/elivo
 NEAR_BUILD := $(CARGO) near build non-reproducible-wasm --no-abi --env "RUSTFLAGS=$(REMAP)"
 
-.PHONY: wasm test-contracts fmt lint sputnik deploy-testnet setup test test-ts
+.PHONY: wasm test-contracts fmt lint sputnik deploy-testnet setup test test-ts demo demo-testnet
 
 wasm:
 	$(NEAR_BUILD) --manifest-path contracts/mock-usdc/Cargo.toml --out-dir target/near/mock_usdc
@@ -41,3 +41,9 @@ test-ts:
 	pnpm test
 
 test: test-contracts test-ts
+
+demo:
+	pnpm exec tsx scripts/demo.ts --network sandbox
+
+demo-testnet:
+	pnpm exec tsx scripts/demo.ts --network testnet

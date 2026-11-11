@@ -46,20 +46,36 @@ export function panicOf(e: unknown): string | null {
   return m ? m[1].trim() : null;
 }
 
+const TRANSIENT =
+  /429|too many requests|rate limit|fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|socket hang up|50[234]|timeout/i;
+
 export class Chain {
   readonly provider: JsonRpcProvider;
   readonly calls: RecordedCall[] = [];
+  private readonly retryDelayMs: number;
 
-  constructor(readonly opts: { rpcUrl: string; network: Network }) {
-    this.provider = new JsonRpcProvider({ url: opts.rpcUrl });
+  constructor(
+    readonly opts: { rpcUrl: string; network: Network; provider?: JsonRpcProvider; retryDelayMs?: number },
+  ) {
+    this.provider = opts.provider ?? new JsonRpcProvider({ url: opts.rpcUrl });
+    this.retryDelayMs = opts.retryDelayMs ?? 500;
   }
 
+  /** View call; retries transient RPC errors (rate limits, network) up to 5 attempts, never contract errors. */
   async view<T>(contractId: string, method: string, args: object = {}): Promise<T> {
-    return (await this.provider.callFunction({
-      contractId,
-      method,
-      args: args as Record<string, unknown>,
-    })) as T;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return (await this.provider.callFunction({
+          contractId,
+          method,
+          args: args as Record<string, unknown>,
+        })) as T;
+      } catch (e) {
+        const msg = String((e as Error)?.message ?? e);
+        if (attempt >= 5 || panicOf(e) || !TRANSIENT.test(msg)) throw e;
+        await new Promise((r) => setTimeout(r, this.retryDelayMs * attempt));
+      }
+    }
   }
 
   account(accountId: string, key: Ed25519Key): Account {
