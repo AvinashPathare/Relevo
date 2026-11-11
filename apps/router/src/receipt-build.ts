@@ -46,7 +46,7 @@ export function buildReceiptBody(
       delivered_at_ns: p.delivered_at_ns,
       proof_ref: p.proof_ref,
       penalties_total: p.penalties_total,
-      txs: draft.txs[p.id] ?? {},
+      txs: structuredClone(draft.txs[p.id] ?? {}), // a copy: later records must not alter a signed receipt
     };
   });
   return {

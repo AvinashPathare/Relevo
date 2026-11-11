@@ -49,6 +49,7 @@ async function postJson<T>(url: string, body: object): Promise<T> {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(10_000),
   });
   if (!r.ok) throw new Error(`${url} → ${r.status}`);
   return (await r.json()) as T;
@@ -96,6 +97,8 @@ const PANIC_TO_HTTP: Record<string, string> = {
 export class Engine {
   readonly reroutes: RerouteRecord[] = [];
   private scanned = 0;
+  /** settle/exclude calls sent but not yet returned; anchoring waits for them so the receipt has every tx. */
+  private inflight = 0;
   private readonly log: NonNullable<EngineDeps["log"]>;
 
   constructor(private readonly deps: EngineDeps) {
@@ -127,7 +130,7 @@ export class Engine {
   async tick(): Promise<void> {
     try {
       const now = await this.deps.chain.blockTimeNs();
-      await this.linkFundedBatches();
+      if (this.deps.store.all().some((d) => d.onchain_batch_id === undefined)) await this.linkFundedBatches();
       for (const draft of this.deps.store.all()) {
         if (draft.onchain_batch_id === undefined || draft.anchor_tx) continue;
         await this.workBatch(draft, now);
@@ -159,19 +162,36 @@ export class Engine {
     const payouts = await this.deps.chain.view<PayoutView[]>(this.deps.escrowId, "get_batch_payouts", {
       batch_id: batchId,
     });
+    const startedMs = Date.now();
+    let caps: Record<string, FirmCapacity> | null = null;
+    let acted = false;
     for (const p of payouts) {
+      // Slow networks: estimate chain time as the tick advances instead of reusing the tick start.
+      const nowEst = now + BigInt(Date.now() - startedMs) * 1_000_000n;
       try {
-        const d = decide(p, now, this.deps.graceNs);
-        if (d === "assign" || d === "reroute") await this.route(draft, p, d, now);
-        else if (d === "refund") await this.refund(draft, p.id);
+        const d = decide(p, nowEst, this.deps.graceNs);
+        if (d === "assign" || d === "reroute") {
+          acted = true;
+          caps ??= await this.capacities();
+          await this.route(draft, p, d, nowEst, caps);
+        } else if (d === "refund") {
+          acted = true;
+          await this.refund(draft, p.id);
+        }
       } catch (e) {
         this.log("payout action failed", { batch_id: batchId, payout_id: p.id, error: (e as Error).message });
       }
     }
-    const fresh = await this.deps.chain.view<PayoutView[]>(this.deps.escrowId, "get_batch_payouts", {
-      batch_id: batchId,
-    });
+    const fresh = acted
+      ? await this.deps.chain.view<PayoutView[]>(this.deps.escrowId, "get_batch_payouts", {
+          batch_id: batchId,
+        })
+      : payouts;
     if (fresh.length > 0 && fresh.every((p) => p.state === "Delivered" || p.state === "Refunded")) {
+      if (this.inflight > 0) {
+        this.log("batch closed; waiting for in-flight submissions before anchoring", { batch_id: batchId });
+        return;
+      }
       await this.anchor(draft, fresh);
     }
   }
@@ -186,8 +206,17 @@ export class Engine {
     );
   }
 
-  private async route(draft: Draft, p: PayoutView, kind: "assign" | "reroute", now: bigint) {
+  private rerouteWindowNs: bigint | null = null;
+
+  private async route(
+    draft: Draft,
+    p: PayoutView,
+    kind: "assign" | "reroute",
+    now: bigint,
+    caps: Record<string, FirmCapacity>,
+  ) {
     const batchId = draft.onchain_batch_id as string;
+    const amount = BigInt(p.amount);
     const quotes = (
       await Promise.allSettled(
         this.deps.firms
@@ -197,7 +226,7 @@ export class Engine {
           ),
       )
     ).flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
-    const pick = pickFirm(quotes, await this.capacities(), p.firms_tried, BigInt(p.amount));
+    const pick = pickFirm(quotes, caps, p.firms_tried, amount);
     if (!pick) {
       this.log("no eligible firm", { batch_id: batchId, payout_id: p.id, kind });
       return;
@@ -220,19 +249,27 @@ export class Engine {
           };
     const r = await this.deps.router.call(this.deps.escrowId, kind, args, { gasTgas: GAS[kind] });
     this.deps.store.addTx(draft.id, p.id, kind, r.txHash);
-    const after = await this.deps.chain.view<PayoutView>(this.deps.escrowId, "get_payout", {
-      batch_id: batchId,
-      payout_id: p.id,
-    });
-    const nowAfter = await this.deps.chain.blockTimeNs();
+    // Track exposure locally so later payouts in this tick see it without another read.
+    caps[pick.firm_id].open_exposure += amount;
+    if (p.firm && caps[p.firm]) caps[p.firm].open_exposure -= amount;
+
+    let cutoffNs = BigInt(p.cutoff_ns);
+    let orderFrom = now;
     if (kind === "reroute") {
+      this.rerouteWindowNs ??= BigInt(
+        (await this.deps.chain.view<ConfigView>(this.deps.escrowId, "get_config")).reroute_window_ns,
+      );
+      const includedBy = await this.deps.chain.blockTimeNs();
+      const deadline = BigInt(p.final_deadline_ns);
+      cutoffNs = includedBy + this.rerouteWindowNs < deadline ? includedBy + this.rerouteWindowNs : deadline;
+      orderFrom = includedBy;
       this.reroutes.push({
         batch_id: batchId,
         payout_id: p.id,
         from: p.firm,
         to: pick.firm_id,
         cutoff_ns: BigInt(p.cutoff_ns),
-        included_by_ns: nowAfter,
+        included_by_ns: includedBy,
       });
     }
     this.log(kind === "assign" ? "assigned" : "rerouted", {
@@ -244,9 +281,7 @@ export class Engine {
       tx: r.txHash,
     });
     const row = draft.rows[p.id];
-    const cutoffMs = Number(
-      (BigInt(after?.cutoff_ns ?? p.cutoff_ns) - (nowAfter > now ? nowAfter : now)) / 1_000_000n,
-    );
+    const cutoffMs = Number((cutoffNs - orderFrom) / 1_000_000n);
     const url = this.deps.firms.find((f) => f.id === pick.firm_id)?.url;
     if (url && row) {
       await this.deps.firmClient
@@ -327,6 +362,7 @@ export class Engine {
     });
     if (!p) return { ok: false, status: 404, error: "unknown_payout" };
     if (p.state !== "Assigned" || p.excluded) return { ok: false, status: 409, error: "already_settled" };
+    this.inflight++;
     try {
       const r = await this.deps.router.call(
         this.deps.escrowId,
@@ -346,6 +382,8 @@ export class Engine {
         return { ok: false, status: 409, error: PANIC_TO_HTTP[e.panic] };
       }
       return { ok: false, status: 400, error: (e as Error).message };
+    } finally {
+      this.inflight--;
     }
   }
 

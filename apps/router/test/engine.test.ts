@@ -183,3 +183,136 @@ describe("engine", () => {
     });
   });
 });
+
+describe("engine on slow networks", () => {
+  it("reads firm capacity once per batch and tracks exposure locally", async () => {
+    const draft = validateCsv(csv.split("\n").slice(0, 3).join("\n"), "18.50", () =>
+      new Uint8Array(32).fill(1),
+    ).draft!;
+    const store = new Store(null);
+    store.put(draft);
+    store.update(draft.id, (d) => {
+      d.onchain_batch_id = "0";
+    });
+    const now = 100n * S;
+    const payout = (id: number): PayoutView => ({
+      batch_id: "0",
+      id,
+      amount: "2000000000",
+      locked: "2005000000",
+      state: "Funded",
+      firm: null,
+      quote_bps: 0,
+      cutoff_ns: String(now + 120n * S),
+      final_deadline_ns: String(now + 300n * S),
+      penalties_total: "0",
+      firms_tried: [],
+      excluded: false,
+      delivered_at_ns: null,
+      proof_ref: null,
+    });
+    const views: Record<string, number> = {};
+    const calls: Array<Record<string, unknown>> = [];
+    const firmsView = [
+      ["mx2", { approved: true, bond: "250000000", open_exposure: "0" }],
+      ["mx3", { approved: true, bond: "100000000", open_exposure: "0" }], // capacity 2,000 USDC: one payout
+    ];
+    const engine = new Engine({
+      chain: {
+        async view<T>(_c: string, method: string): Promise<T> {
+          views[method] = (views[method] ?? 0) + 1;
+          const r: Record<string, unknown> = {
+            get_batch_count: "1",
+            get_batch: { id: "0", batch_hash: draft.batch_hash, receipt_hash: null },
+            get_batch_payouts: [payout(0), payout(1)],
+            list_firms: firmsView,
+          };
+          return r[method] as T;
+        },
+        blockTimeNs: async () => now,
+        explorerTx: () => null,
+      },
+      router: {
+        accountId: "router",
+        async call(_c: string, _m: string, args: object) {
+          calls.push(args as Record<string, unknown>);
+          return { txHash: "tx", logs: [] };
+        },
+      },
+      escrowId: "escrow",
+      store,
+      firms: [
+        { id: "mx2", url: "mx2" },
+        { id: "mx3", url: "mx3" },
+      ],
+      firmClient: {
+        quote: async (url) => ({ firm_id: url, quote_bps: url === "mx3" ? 18 : 20, quote_sig: "c2ln" }),
+        order: async () => {},
+      },
+      graceNs: 5n * S,
+      receiptKey: keyFromSeed(new Uint8Array(32).fill(2)),
+      network: "testnet",
+    });
+    await engine.tick();
+    expect(calls.map((c) => c.firm_id)).toEqual(["mx3", "mx2"]);
+    expect(views.list_firms).toBe(1);
+    expect(views.get_payout ?? 0).toBe(0);
+  });
+});
+
+describe("engine anchoring", () => {
+  it("does not anchor while a proof submission is in flight", async () => {
+    const w = world({ state: "Assigned", firm: "mx3", firms_tried: ["mx3"] });
+    w.store.update(w.draft.id, (d) => {
+      d.onchain_batch_id = "0";
+    });
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const orig = w.deps.router.call;
+    w.deps.router.call = async (c, m, a, o) => {
+      if (m === "settle") {
+        const r = await orig(c, m, a, o); // state becomes Delivered on-chain...
+        await gate; // ...but the call has not returned to the router yet
+        return r;
+      }
+      return orig(c, m, a, o);
+    };
+    const e = new Engine(w.deps);
+    const proof = {
+      batch_id: "0",
+      payout_id: 0,
+      firm_id: "mx3",
+      delivered_at_ns: "1",
+      proof_ref: "CEP",
+      nonce: "9",
+    };
+    const pending = e.submitProof(proof, "c2ln");
+    await new Promise((r) => setTimeout(r, 10));
+    await e.tick();
+    expect(w.calls.filter((c) => c.method === "anchor_receipt")).toHaveLength(0);
+    release();
+    await pending;
+    await e.tick();
+    expect(w.calls.filter((c) => c.method === "anchor_receipt")).toHaveLength(1);
+    expect(w.store.get(w.draft.id)?.receipt?.payouts[0].txs.settle).toEqual(["tx1"]);
+  });
+});
+
+describe("engine request budget", () => {
+  it("an idle tick reads the batch once and skips the funding scan when no draft is waiting", async () => {
+    const w = world({ state: "Assigned", firm: "mx3", firms_tried: ["mx3"] });
+    w.store.update(w.draft.id, (d) => {
+      d.onchain_batch_id = "0";
+    });
+    const counts: Record<string, number> = {};
+    const view = w.deps.chain.view.bind(w.deps.chain);
+    w.deps.chain.view = async <T>(c: string, m: string, a?: object): Promise<T> => {
+      counts[m] = (counts[m] ?? 0) + 1;
+      return view<T>(c, m, a);
+    };
+    await new Engine(w.deps).tick();
+    expect(counts).toEqual({ get_batch_payouts: 1 });
+  });
+});

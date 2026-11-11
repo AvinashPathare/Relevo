@@ -54,23 +54,37 @@ async function setupTestnet(): Promise<Setup> {
     rpcUrl: process.env.NEAR_RPC_URL ?? d.rpcUrl,
     network: "testnet",
     retryDelayMs: 1_000,
+    fallbackRpcUrls: env({ ELIVO_NETWORK: "testnet" }).rpcFallbacks,
   });
   const cred = (id: string) => loadKeyFile(join(homedir(), ".near-credentials", "testnet", `${id}.json`));
   const k = (n: string) => loadKeyFile(`.data/keys/${n}.json`);
   // Demo bonds: MX-1 1,000 / MX-2 250 / MX-3 250 USDC, so assignments spread across firms.
+  // Trim with withdraw_bond, or top up (mint mock USDC to the firm, then post_bond).
   const firms = Object.fromEntries(await chain.view<Array<[string, FirmView]>>(d.escrow, "list_firms"));
-  for (const [n, target] of [
+  const targets = [
+    ["mx1", 1_000_000_000n],
     ["mx2", 250_000_000n],
     ["mx3", 250_000_000n],
-  ] as const) {
+  ] as const;
+  for (const [n, target] of targets) {
     const id = d.firms[n];
     const bond = BigInt(firms[id].bond);
+    const firm = chain.signer(id, cred(id));
     if (bond > target) {
+      await firm.call(d.escrow, "withdraw_bond", { amount: (bond - target).toString() }, { gasTgas: 60 });
+    } else if (bond < target) {
+      const diff = (target - bond).toString();
       await chain
-        .signer(id, cred(id))
-        .call(d.escrow, "withdraw_bond", { amount: (bond - target).toString() }, { gasTgas: 60 });
-      note(`${short(id)} bond set to ${usdc(target)}`);
+        .signer(d.usdc, cred(d.usdc))
+        .call(d.usdc, "mint", { account_id: id, amount: diff }, { gasTgas: 30 });
+      await firm.call(
+        d.usdc,
+        "ft_transfer_call",
+        { receiver_id: d.escrow, amount: diff, msg: JSON.stringify({ kind: "post_bond" }) },
+        { gasTgas: 150, depositYocto: 1n },
+      );
     }
+    if (bond !== target) note(`${short(id)} bond set to ${usdc(target)}`);
   }
   return {
     chain,
@@ -223,7 +237,7 @@ async function main() {
           );
       }
       if (status.onchain?.receipt_hash) break;
-      await new Promise((r) => setTimeout(r, network === "testnet" ? 3_000 : 1_000));
+      await new Promise((r) => setTimeout(r, network === "testnet" ? 5_000 : 1_000));
     }
     if (!status.onchain?.receipt_hash)
       throw new Error("batch did not complete in time; see .data/logs/router.log");
@@ -235,46 +249,32 @@ async function main() {
     mkdirSync(".data/receipts", { recursive: true });
     const rfile = `.data/receipts/${network}-batch-${status.onchain.id}.json`;
     writeFileSync(rfile, `${JSON.stringify(receipt, null, 2)}\n`);
-    const out = execFileSync(
-      process.execPath,
-      [
-        "--import",
-        "tsx",
-        "packages/shared/src/bin/verify-receipt.ts",
-        rfile,
-        "--chain",
-        "--rpc",
-        chain.opts.rpcUrl,
-        "--escrow",
-        d.escrow,
-      ],
-      {
-        encoding: "utf8",
-      },
-    ).trim();
+    const verify = (file: string): string => {
+      try {
+        return execFileSync(
+          process.execPath,
+          [
+            "--import",
+            "tsx",
+            "packages/shared/src/bin/verify-receipt.ts",
+            file,
+            "--chain",
+            "--rpc",
+            chain.opts.rpcUrl,
+            "--escrow",
+            d.escrow,
+          ],
+          { encoding: "utf8", stdio: "pipe" },
+        ).trim();
+      } catch (err) {
+        return String((err as { stdout?: string }).stdout ?? "").trim() || "FAIL: error";
+      }
+    };
+    const out = verify(rfile);
     say(`verify-receipt ${rfile} --chain → ${out}`);
     const tampered = { ...receipt, totals: { ...receipt.totals, penalties: "0" } };
     writeFileSync(`${rfile}.edited`, JSON.stringify(tampered));
-    let editedOut = "";
-    try {
-      execFileSync(
-        process.execPath,
-        [
-          "--import",
-          "tsx",
-          "packages/shared/src/bin/verify-receipt.ts",
-          `${rfile}.edited`,
-          "--chain",
-          "--rpc",
-          chain.opts.rpcUrl,
-          "--escrow",
-          d.escrow,
-        ],
-        { encoding: "utf8", stdio: "pipe" },
-      );
-    } catch (err) {
-      editedOut = String((err as { stdout?: string }).stdout ?? "").trim();
-    }
+    const editedOut = verify(`${rfile}.edited`);
     say(`Same receipt with one number edited → ${editedOut || "(unexpectedly accepted)"}`);
 
     // Outcome checks (same as the end-to-end test).

@@ -12,7 +12,11 @@ import { Store } from "./store.ts";
 const e = env();
 const need = (k: string) => process.env[k] ?? (console.error(`missing ${k}`), process.exit(2));
 const d = loadDeployment(need("DEPLOYMENT"));
-const chain = new Chain({ rpcUrl: d.rpcUrl, network: d.network });
+const chain = new Chain({
+  rpcUrl: process.env.NEAR_RPC_URL ?? d.rpcUrl,
+  network: d.network,
+  fallbackRpcUrls: e.rpcFallbacks,
+});
 const firmUrls: Record<string, string> = {
   [d.firms.mx1]: need("MX1_URL"),
   [d.firms.mx2]: need("MX2_URL"),

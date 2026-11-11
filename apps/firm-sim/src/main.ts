@@ -20,6 +20,7 @@ async function post(path: string, body: object) {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(30_000),
   });
   if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
 }

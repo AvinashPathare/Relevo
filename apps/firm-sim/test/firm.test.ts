@@ -124,3 +124,35 @@ describe("firm simulator", () => {
     expect(res.body).not.toContain(OPEN);
   });
 });
+
+describe("firm delivery retries", () => {
+  it("retries a delivery the oracle could not process (5xx), not one it refused (409)", async () => {
+    let attempts = 0;
+    const { app, scheduled } = setup("ok", {
+      oracle: {
+        deliver: async () => {
+          attempts++;
+          if (attempts < 3) throw new Error("500 Internal Server Error");
+        },
+        exclude: async () => {},
+      },
+    });
+    await app.inject({ method: "POST", url: "/orders", payload: order() });
+    for (let i = 0; i < scheduled.length; i++) await scheduled[i].fn(); // retries are scheduled too
+    expect(attempts).toBe(3);
+
+    let refused = 0;
+    const s2 = setup("ok", {
+      oracle: {
+        deliver: async () => {
+          refused++;
+          throw new Error("409 not_current_firm");
+        },
+        exclude: async () => {},
+      },
+    });
+    await s2.app.inject({ method: "POST", url: "/orders", payload: order() });
+    for (let i = 0; i < s2.scheduled.length; i++) await s2.scheduled[i].fn();
+    expect(refused).toBe(1);
+  });
+});

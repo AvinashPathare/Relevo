@@ -7,13 +7,14 @@ import { createOracle, type Order } from "./oracle.ts";
 const e = env();
 const need = (k: string) => process.env[k] ?? (console.error(`missing ${k}`), process.exit(2));
 const router = need("ROUTER_URL");
-const chain = new Chain({ rpcUrl: e.rpcUrl, network: e.network });
+const chain = new Chain({ rpcUrl: e.rpcUrl, network: e.network, fallbackRpcUrls: e.rpcFallbacks });
 
 async function post(path: string, body: object) {
   const r = await fetch(`${router}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(30_000),
   });
   if (!r.ok) throw new Error(`${path} ${r.status} ${await r.text()}`);
 }
@@ -23,7 +24,7 @@ const app = createOracle({
   key: keyFromSecret(need("ORACLE_SECRET_KEY")),
   nowNs: () => chain.blockTimeNs(),
   lookupOrder: async (b, p) => {
-    const r = await fetch(`${router}/orders/${b}/${p}`);
+    const r = await fetch(`${router}/orders/${b}/${p}`, { signal: AbortSignal.timeout(15_000) });
     return r.ok ? ((await r.json()) as Order) : null;
   },
   submitProof: (proof, sig) => post("/proofs", { proof, oracle_sig: sig }),

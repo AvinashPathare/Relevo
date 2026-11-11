@@ -121,3 +121,20 @@ describe("buildReceiptBody", () => {
     });
   });
 });
+
+describe("buildReceiptBody isolation", () => {
+  it("is not changed by later tx records", () => {
+    const b = buildReceiptBody(
+      draft,
+      batch,
+      payouts,
+      "sandbox",
+      "escrow.test.near",
+      "2026-11-12T00:00:00.000Z",
+    );
+    const before = JSON.stringify(b);
+    draft.txs[0].settle.push("late-hash");
+    draft.txs[1] = { assign: ["x"] };
+    expect(JSON.stringify(b)).toBe(before);
+  });
+});

@@ -50,13 +50,22 @@ export function createFirm(deps: FirmDeps): FastifyInstance {
   const random = deps.random ?? Math.random;
   const log = deps.log ?? (() => {});
 
-  const safely = (what: string, fn: () => Promise<void>) => async () => {
-    try {
-      await fn();
-    } catch (e) {
-      log(`${deps.firmId} ${what} refused: ${(e as Error).message}`);
-    }
-  };
+  // Retry when the oracle could not process the request (5xx / network); a refusal (4xx) is final.
+  const safely =
+    (what: string, fn: () => Promise<void>, left = 5) =>
+    async () => {
+      try {
+        await fn();
+      } catch (e) {
+        const msg = (e as Error).message;
+        if (left > 1 && /\b5\d\d\b|fetch failed|timeout|ECONN/i.test(msg)) {
+          log(`${deps.firmId} ${what} failed (${msg.slice(0, 60)}), retrying`);
+          schedule(3_000, safely(what, fn, left - 1));
+        } else {
+          log(`${deps.firmId} ${what} refused: ${msg.slice(0, 120)}`);
+        }
+      }
+    };
 
   app.get("/", async () => ({ service: "firm-sim", firm_id: deps.firmId, mode, label: LABEL }));
 
