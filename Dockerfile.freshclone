@@ -1,12 +1,17 @@
 # Fresh-clone check: builds the repo from a clean copy and runs exactly what the README says.
 #   git archive HEAD | docker build -f Dockerfile.freshclone -t elivo-freshclone -
-#   docker run --rm --platform linux/amd64 elivo-freshclone
-# cargo-near ships prebuilt binaries for x86_64 Linux (what CI and most graders run), not aarch64.
-FROM --platform=linux/amd64 node:22-bookworm
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain 1.95.0 -t wasm32-unknown-unknown -c clippy -c rustfmt \
- && curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-v0.23.0/cargo-near-installer.sh | sh \
- && corepack enable && corepack prepare pnpm@10.30.0 --activate
+#   docker run --rm elivo-freshclone
+# Runs natively on x86_64 and aarch64. cargo-near ships prebuilt binaries only for x86_64 Linux,
+# so on aarch64 it is compiled from source (slower first build).
+FROM node:22-bookworm
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain 1.95.0 -t wasm32-unknown-unknown -c clippy -c rustfmt
 ENV PATH="/root/.cargo/bin:${PATH}"
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+      curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-v0.23.0/cargo-near-installer.sh | sh; \
+    else \
+      apt-get update && apt-get install -y --no-install-recommends libudev-dev pkg-config && cargo install cargo-near --version 0.23.0 --locked; \
+    fi \
+ && corepack enable && corepack prepare pnpm@10.30.0 --activate
 WORKDIR /repo
 COPY . .
 RUN make setup
