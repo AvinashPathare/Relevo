@@ -1,0 +1,7 @@
+{
+  "name": "@elivo/router",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "tsx src/main.ts" },
+  "dependencies": { "@elivo/shared": "workspace:*", "canonicalize": "5.1.0", "fastify": "5.12.8" }
+}

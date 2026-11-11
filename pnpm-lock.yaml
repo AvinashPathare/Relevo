@@ -42,6 +42,18 @@ importers:
         specifier: 5.12.8
         version: 5.12.8
 
+  apps/router:
+    dependencies:
+      '@elivo/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      canonicalize:
+        specifier: 5.1.0
+        version: 5.1.0
+      fastify:
+        specifier: 5.12.8
+        version: 5.12.8
+
   packages/shared:
     dependencies:
       canonicalize:
