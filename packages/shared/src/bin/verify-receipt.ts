@@ -31,8 +31,24 @@ async function main() {
     fail("unreadable");
   }
   let expected = arg("--pubkey");
-  const anchored: string | null | undefined = undefined;
-  if (process.argv.includes("--chain")) fail("--chain arrives with the chain client (plan 2 task 4)");
+  let anchored: string | null | undefined;
+  if (process.argv.includes("--chain")) {
+    const rpc = arg("--rpc");
+    const escrow = arg("--escrow") ?? receipt.escrow;
+    if (!rpc) fail("missing --rpc");
+    const { Chain } = await import("../chain.ts");
+    const chain = new Chain({ rpcUrl: rpc as string, network: "testnet" });
+    const batch = await chain.view<{ receipt_pk: string; receipt_hash: string | null } | null>(
+      escrow,
+      "get_batch",
+      {
+        batch_id: receipt.batch_id,
+      },
+    );
+    if (!batch) fail("unknown_batch");
+    expected = batch.receipt_pk;
+    anchored = batch.receipt_hash;
+  }
   if (!expected) fail("no expected public key (use --pubkey or --chain)");
   const v = verifyReceipt(receipt, expected);
   if (!v.ok) fail(v.reason);
