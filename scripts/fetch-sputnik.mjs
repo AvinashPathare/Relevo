@@ -5,7 +5,7 @@
 // Source: factory `sputnikv2.testnet`, method get_code(code_hash).
 // Upstream: https://github.com/near-daos/sputnik-dao-contract (third-party; not part of this repo).
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -35,40 +35,47 @@ const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.arg
 if (isMain) await main();
 
 async function main() {
+  if (process.argv.includes("--print-source")) {
+    console.log(
+      `factory: ${FACTORY}\ncode_hash: ${CODE_HASH}\nupstream: https://github.com/near-daos/sputnik-dao-contract`,
+    );
+    process.exit(0);
+  }
 
-if (process.argv.includes("--print-source")) {
-  console.log(`factory: ${FACTORY}\ncode_hash: ${CODE_HASH}\nupstream: https://github.com/near-daos/sputnik-dao-contract`);
-  process.exit(0);
-}
+  if (existsSync(out) && hashOf(readFileSync(out)) === CODE_HASH) {
+    console.log(`sputnik wasm cached and verified: ${out}`);
+    process.exit(0);
+  }
 
-if (existsSync(out) && hashOf(readFileSync(out)) === CODE_HASH) {
-  console.log(`sputnik wasm cached and verified: ${out}`);
-  process.exit(0);
-}
-
-const args = Buffer.from(JSON.stringify({ code_hash: CODE_HASH })).toString("base64");
-const res = await fetch(RPC, {
-  method: "POST",
-  headers: { "content-type": "application/json" },
-  body: JSON.stringify({
-    jsonrpc: "2.0",
-    id: "elivo",
-    method: "query",
-    params: { request_type: "call_function", finality: "final", account_id: FACTORY, method_name: "get_code", args_base64: args },
-  }),
-});
-const body = await res.json();
-if (!body.result?.result) {
-  console.error("RPC error fetching sputnik wasm:", JSON.stringify(body).slice(0, 400));
-  process.exit(1);
-}
-const wasm = Buffer.from(body.result.result);
-const got = hashOf(wasm);
-if (got !== CODE_HASH) {
-  console.error(`hash mismatch: expected ${CODE_HASH}, got ${got}`);
-  process.exit(1);
-}
-mkdirSync(dirname(out), { recursive: true });
-writeFileSync(out, wasm);
-console.log(`sputnik wasm fetched and verified (${wasm.length} bytes): ${out}`);
+  const args = Buffer.from(JSON.stringify({ code_hash: CODE_HASH })).toString("base64");
+  const res = await fetch(RPC, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: "elivo",
+      method: "query",
+      params: {
+        request_type: "call_function",
+        finality: "final",
+        account_id: FACTORY,
+        method_name: "get_code",
+        args_base64: args,
+      },
+    }),
+  });
+  const body = await res.json();
+  if (!body.result?.result) {
+    console.error("RPC error fetching sputnik wasm:", JSON.stringify(body).slice(0, 400));
+    process.exit(1);
+  }
+  const wasm = Buffer.from(body.result.result);
+  const got = hashOf(wasm);
+  if (got !== CODE_HASH) {
+    console.error(`hash mismatch: expected ${CODE_HASH}, got ${got}`);
+    process.exit(1);
+  }
+  mkdirSync(dirname(out), { recursive: true });
+  writeFileSync(out, wasm);
+  console.log(`sputnik wasm fetched and verified (${wasm.length} bytes): ${out}`);
 }
