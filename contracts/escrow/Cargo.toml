@@ -16,3 +16,4 @@ hex = { workspace = true }
 
 [dev-dependencies]
 near-sdk = { workspace = true, features = ["unit-testing"] }
+proptest = { workspace = true }
