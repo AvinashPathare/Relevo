@@ -40,3 +40,9 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - name: Fetch Sputnik DAO wasm (hash-checked)
+        run: node scripts/fetch-sputnik.mjs
+      - name: End-to-end on a local sandbox
+        run: pnpm test:e2e
+      - name: make demo (local sandbox, self-checking)
+        run: make demo

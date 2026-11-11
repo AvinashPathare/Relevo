@@ -33,7 +33,7 @@ deploy-testnet:
 
 setup:
 	pnpm install
-	pnpm setup
+	pnpm run setup
 
 test-ts:
 	pnpm lint
