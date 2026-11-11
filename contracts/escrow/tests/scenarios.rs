@@ -1,3 +1,5 @@
+// `ok(..)` asserts success and returns the result for optional inspection; discarding it is fine.
+#![allow(unused_must_use)]
 //! Sandbox integration scenarios against the compiled wasm (contracts/res).
 mod common;
 
