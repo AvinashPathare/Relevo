@@ -17,6 +17,8 @@ export class ChainCallError extends Error {
 export interface CallResult {
   txHash: string;
   logs: string[];
+  /** JSON-decoded return value of the call, if any. */
+  value?: unknown;
 }
 
 export interface ChainAccount {
@@ -90,7 +92,16 @@ export class Chain {
             const msg = JSON.stringify(failure.outcome.status);
             throw new ChainCallError(method, panicOf(msg) ?? "failure", msg);
           }
-          return { txHash, logs };
+          const sv = (r.status as { SuccessValue?: string } | undefined)?.SuccessValue;
+          let value: unknown;
+          if (sv) {
+            try {
+              value = JSON.parse(Buffer.from(sv, "base64").toString("utf8"));
+            } catch {
+              value = undefined;
+            }
+          }
+          return { txHash, logs, value };
         } catch (e) {
           if (e instanceof ChainCallError) throw e;
           throw new ChainCallError(method, panicOf(e) ?? "error", String((e as Error).message ?? e));

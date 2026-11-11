@@ -53,6 +53,13 @@ importers:
       fastify:
         specifier: 5.12.8
         version: 5.12.8
+    devDependencies:
+      '@elivo/firm-sim':
+        specifier: workspace:*
+        version: link:../firm-sim
+      '@elivo/oracle':
+        specifier: workspace:*
+        version: link:../oracle
 
   packages/shared:
     dependencies:

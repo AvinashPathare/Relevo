@@ -46,7 +46,7 @@ interface OrderBody {
 export function createFirm(deps: FirmDeps): FastifyInstance {
   const app = Fastify({ logger: false });
   let mode: Mode = deps.mode;
-  const schedule = deps.schedule ?? ((ms, fn) => void setTimeout(fn, ms));
+  const schedule = deps.schedule ?? ((ms, fn) => void setTimeout(fn, ms).unref());
   const random = deps.random ?? Math.random;
   const log = deps.log ?? (() => {});
 

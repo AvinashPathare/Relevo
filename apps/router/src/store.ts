@@ -16,6 +16,8 @@ export interface Draft {
   txs: Record<number, Record<string, string[]>>;
   exclusion_reasons: Record<number, string>;
   receipt?: Receipt;
+  /** tx hash of anchor_receipt once the receipt hash is on-chain */
+  anchor_tx?: string;
 }
 
 interface Data {
