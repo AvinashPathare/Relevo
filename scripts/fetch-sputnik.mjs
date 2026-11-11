@@ -31,6 +31,10 @@ export function base58(bytes) {
 }
 
 const hashOf = (buf) => base58(createHash("sha256").update(buf).digest());
+const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isMain) await main();
+
+async function main() {
 
 if (process.argv.includes("--print-source")) {
   console.log(`factory: ${FACTORY}\ncode_hash: ${CODE_HASH}\nupstream: https://github.com/near-daos/sputnik-dao-contract`);
@@ -67,3 +71,4 @@ if (got !== CODE_HASH) {
 mkdirSync(dirname(out), { recursive: true });
 writeFileSync(out, wasm);
 console.log(`sputnik wasm fetched and verified (${wasm.length} bytes): ${out}`);
+}

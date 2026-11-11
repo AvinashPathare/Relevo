@@ -3,7 +3,7 @@ SHELL := /bin/bash
 CARGO ?= $(shell command -v cargo 2>/dev/null || echo $(HOME)/.cargo/bin/cargo)
 RES := contracts/res
 
-.PHONY: wasm test-contracts fmt lint sputnik
+.PHONY: wasm test-contracts fmt lint sputnik deploy-testnet
 
 wasm:
 	$(CARGO) near build non-reproducible-wasm --manifest-path contracts/mock-usdc/Cargo.toml --no-abi --out-dir target/near/mock_usdc
@@ -23,3 +23,6 @@ fmt:
 
 lint:
 	$(CARGO) clippy --workspace --all-targets -- -D warnings
+
+deploy-testnet:
+	./scripts/deploy-testnet.sh
