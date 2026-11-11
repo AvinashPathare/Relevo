@@ -143,9 +143,9 @@ Demo mode: one penalty period is 10 s.
 | Router (function-call key) | [router.pg-1794403941.testnet](https://testnet.nearblocks.io/address/router.pg-1794403941.testnet) |
 | Firms | [mx1](https://testnet.nearblocks.io/address/mx1.pg-1794403941.testnet) · [mx2](https://testnet.nearblocks.io/address/mx2.pg-1794403941.testnet) · [mx3](https://testnet.nearblocks.io/address/mx3.pg-1794403941.testnet) `.pg-1794403941.testnet` |
 | DAO (Sputnik v2) | [elivo-1794414333.sputnikv2.testnet](https://testnet.nearblocks.io/address/elivo-1794414333.sputnikv2.testnet) |
-| Reference run | Batch 4, receipt anchored in [238gcFWX…](https://testnet.nearblocks.io/txns/238gcFWXh7aVqcvQq46icscQjAFPth95zPAPNhvZs7G3) |
+| Reference run | Batch 5, receipt anchored in [2qeoXKVn…](https://testnet.nearblocks.io/txns/2qeoXKVnS28WxkdEy5kaAb7CRbk5jRviq2Lq2BavWg3M) |
 
-Earlier batches (0–3) were development runs. Their open payouts were refunded to the DAO.
+Batches 0–3 were development runs; their open payouts were refunded to the DAO. Batch 2's anchored hash came from a receipt that changed after signing (a bug since fixed), so it does not verify. Batch 4 is a complete run from before the final review fixes, and batch 5 is the reference.
 
 ## Tracks entered and why
 
