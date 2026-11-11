@@ -147,14 +147,27 @@ export class Engine {
         batch_id: String(id),
       });
       const draft = b && this.deps.store.byHash(b.batch_hash);
-      if (draft && draft.onchain_batch_id === undefined) {
+      if (draft && draft.onchain_batch_id === undefined && (await this.matchesDraft(b, draft))) {
         this.deps.store.update(draft.id, (d) => {
           d.onchain_batch_id = String(id);
         });
         this.log("batch funded", { batch_id: id, draft: draft.id });
+      } else if (draft && draft.onchain_batch_id === undefined) {
+        this.log("ignored a batch with a matching hash but wrong funder or amounts", { batch_id: id });
       }
     }
     this.scanned = count;
+  }
+
+  /** The batch hash is public once proposed: also require the DAO as funder and the draft's exact amounts. */
+  private async matchesDraft(b: BatchView, draft: Draft): Promise<boolean> {
+    const dao = this.deps.proposal?.daoId;
+    if (dao && b.funder !== dao) return false;
+    if (b.payout_count !== draft.amounts_usdc.length) return false;
+    const ps = await this.deps.chain.view<PayoutView[]>(this.deps.escrowId, "get_batch_payouts", {
+      batch_id: b.id,
+    });
+    return ps.length === draft.amounts_usdc.length && ps.every((p) => p.amount === draft.amounts_usdc[p.id]);
   }
 
   private async workBatch(draft: Draft, now: bigint) {
@@ -177,6 +190,9 @@ export class Engine {
         } else if (d === "refund") {
           acted = true;
           await this.refund(draft, p.id);
+        } else if (p.state === "Assigned" && !p.excluded && p.firm && draft.orders_sent?.[p.id] !== p.firm) {
+          // The firm may never have received its order (failed POST, timed-out tx that landed, restart).
+          await this.sendOrder(draft, p.id, p.firm, BigInt(p.cutoff_ns), nowEst);
         }
       } catch (e) {
         this.log("payout action failed", { batch_id: batchId, payout_id: p.id, error: (e as Error).message });
@@ -280,22 +296,37 @@ export class Engine {
       quote_bps: pick.quote_bps,
       tx: r.txHash,
     });
-    const row = draft.rows[p.id];
-    const cutoffMs = Number((cutoffNs - orderFrom) / 1_000_000n);
-    const url = this.deps.firms.find((f) => f.id === pick.firm_id)?.url;
-    if (url && row) {
-      await this.deps.firmClient
-        .order(url, {
-          batch_id: batchId,
-          payout_id: p.id,
-          clabe: row.clabe,
-          name: row.name,
-          amount_mxn: row.amount_mxn,
-          cutoff_ms: Math.max(cutoffMs, 0),
-        })
-        .catch((e) =>
-          this.log("order delivery to firm failed", { firm: pick.firm_id, error: (e as Error).message }),
-        );
+    if (kind === "assign") {
+      this.deps.store.update(draft.id, (d) => {
+        d.assigned_at_ns ??= {};
+        d.assigned_at_ns[p.id] ??= now.toString();
+      });
+    }
+    await this.sendOrder(draft, p.id, pick.firm_id, cutoffNs, orderFrom);
+  }
+
+  private async sendOrder(draft: Draft, payoutId: number, firmId: string, cutoffNs: bigint, fromNs: bigint) {
+    const row = draft.rows[payoutId];
+    const url = this.deps.firms.find((f) => f.id === firmId)?.url;
+    if (!url || !row) return;
+    try {
+      await this.deps.firmClient.order(url, {
+        batch_id: draft.onchain_batch_id as string,
+        payout_id: payoutId,
+        clabe: row.clabe,
+        name: row.name,
+        amount_mxn: row.amount_mxn,
+        cutoff_ms: Math.max(Number((cutoffNs - fromNs) / 1_000_000n), 0),
+      });
+      this.deps.store.update(draft.id, (d) => {
+        d.orders_sent ??= {};
+        d.orders_sent[payoutId] = firmId;
+      });
+    } catch (e) {
+      this.log("order delivery to firm failed; the next tick retries", {
+        firm: firmId,
+        error: (e as Error).message,
+      });
     }
   }
 
@@ -371,6 +402,10 @@ export class Engine {
         { gasTgas: GAS[kind] },
       );
       this.deps.store.addTx(draft.id, json.payout_id, kind, r.txHash);
+      this.deps.store.update(draft.id, (d) => {
+        d.oracle_sigs ??= {};
+        d.oracle_sigs[json.payout_id] = sig;
+      });
       this.log(kind === "settle" ? "delivered" : "excluded", {
         batch_id: json.batch_id,
         payout_id: json.payout_id,
@@ -395,20 +430,26 @@ export class Engine {
     exclusion: { batch_id: string; payout_id: number; reason_code?: number },
     sig: string,
   ): Promise<SubmitResult> {
-    const r = await this.submit("exclude", exclusion, sig, {
-      batch_id: exclusion.batch_id,
-      payout_id: exclusion.payout_id,
-      exclusion,
-    });
-    if (!r.ok) return r;
-    const draft = this.deps.store.byOnchainId(exclusion.batch_id) as Draft;
-    this.deps.store.update(draft.id, (d) => {
-      d.exclusion_reasons[exclusion.payout_id] = "ACCOUNT_CLOSED";
-    });
-    await this.refund(draft, exclusion.payout_id).catch((e) =>
-      this.log("refund after exclusion failed; the next tick retries", { error: (e as Error).message }),
-    );
-    return r;
+    // Held across exclude + refund so the tick can't anchor before the refund tx is recorded.
+    this.inflight++;
+    try {
+      const r = await this.submit("exclude", exclusion, sig, {
+        batch_id: exclusion.batch_id,
+        payout_id: exclusion.payout_id,
+        exclusion,
+      });
+      if (!r.ok) return r;
+      const draft = this.deps.store.byOnchainId(exclusion.batch_id) as Draft;
+      this.deps.store.update(draft.id, (d) => {
+        d.exclusion_reasons[exclusion.payout_id] = "ACCOUNT_CLOSED";
+      });
+      await this.refund(draft, exclusion.payout_id).catch((e) =>
+        this.log("refund after exclusion failed; the next tick retries", { error: (e as Error).message }),
+      );
+      return r;
+    } finally {
+      this.inflight--;
+    }
   }
 
   async order(

@@ -86,6 +86,25 @@ async function setupTestnet(): Promise<Setup> {
     }
     if (bond !== target) note(`${short(id)} bond set to ${usdc(target)}`);
   }
+  // The router's function-call key pays gas from a fixed allowance; warn before it runs out mid-demo.
+  const fc = k("router-fc");
+  try {
+    const ak = (await chain.provider.viewAccessKey({
+      accountId: d.router,
+      publicKey: fc.publicKeyStr,
+    })) as {
+      permission?: { FunctionCall?: { allowance?: string | null } } | string;
+    };
+    const allowance = typeof ak.permission === "object" ? ak.permission.FunctionCall?.allowance : null;
+    if (allowance) {
+      const near = Number(BigInt(allowance) / 10n ** 21n) / 1000;
+      note(
+        `router function-call key allowance left: ${near.toFixed(3)} NEAR${near < 0.1 ? "  ← LOW: re-add the key with a larger allowance" : ""}`,
+      );
+    }
+  } catch (err) {
+    note(`could not read the router key's allowance: ${(err as Error).message.slice(0, 80)}`);
+  }
   return {
     chain,
     d,

@@ -36,6 +36,8 @@ function body(): ReceiptBody {
         final_deadline_ns: "2",
         delivered_at_ns: "1",
         proof_ref: "CEP-SIM-0-0-abcd",
+        oracle_sig: "c2ln",
+        assigned_at_ns: "1",
         penalties_total: "200000",
         txs: { assign: ["h1"], reroute: ["h2"], settle: ["h3"] },
       },
@@ -48,6 +50,40 @@ function body(): ReceiptBody {
     },
   };
 }
+
+describe("verify-receipt --chain", () => {
+  it("requires --escrow instead of trusting the escrow named in the file", { timeout: 30_000 }, () => {
+    const dir = mkdtempSync(join(tmpdir(), "elivo-receipt-"));
+    const file = join(dir, "r.json");
+    writeFileSync(file, JSON.stringify(signReceipt(body(), key)));
+    let out = "";
+    let code = 0;
+    try {
+      execFileSync(
+        "pnpm",
+        [
+          "exec",
+          "tsx",
+          "packages/shared/src/bin/verify-receipt.ts",
+          file,
+          "--chain",
+          "--rpc",
+          "http://127.0.0.1:9",
+        ],
+        {
+          encoding: "utf8",
+          stdio: "pipe",
+        },
+      );
+    } catch (e) {
+      const err = e as { status: number; stdout: string };
+      code = err.status;
+      out = err.stdout;
+    }
+    expect(code).toBe(1);
+    expect(out.trim()).toBe("FAIL: --chain needs --escrow (the file's escrow is not trusted)");
+  });
+});
 
 describe("receipts", () => {
   it("sign then verify ok", () => {
@@ -70,7 +106,7 @@ describe("receipts", () => {
     const shuffled = Object.fromEntries(Object.entries(b).reverse()) as unknown as ReceiptBody;
     expect(receiptHashB58(signReceipt(shuffled, key))).toBe(receiptHashB58(signReceipt(b, key)));
   });
-  it("cli prints OK and FAIL", () => {
+  it("cli prints OK and FAIL", { timeout: 30_000 }, () => {
     const dir = mkdtempSync(join(tmpdir(), "elivo-receipt-"));
     const file = join(dir, "r.json");
     const cli = ["tsx", "packages/shared/src/bin/verify-receipt.ts", file, "--pubkey", key.publicKeyStr];

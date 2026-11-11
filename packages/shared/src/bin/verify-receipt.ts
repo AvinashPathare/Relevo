@@ -34,7 +34,8 @@ async function main() {
   let anchored: string | null | undefined;
   if (process.argv.includes("--chain")) {
     const rpc = arg("--rpc");
-    const escrow = arg("--escrow") ?? receipt.escrow;
+    const escrow = arg("--escrow");
+    if (!escrow) fail("--chain needs --escrow (the file's escrow is not trusted)");
     if (!rpc) fail("missing --rpc");
     const { Chain } = await import("../chain.ts");
     const chain = new Chain({ rpcUrl: rpc as string, network: "testnet" });

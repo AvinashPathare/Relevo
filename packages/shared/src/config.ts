@@ -45,7 +45,7 @@ export function env(e: NodeJS.ProcessEnv = process.env): Env {
   return {
     network,
     rpcUrl:
-      e.NEAR_RPC_URL ?? (network === "testnet" ? "https://rpc.testnet.near.org" : "http://127.0.0.1:3030"),
+      e.NEAR_RPC_URL ?? (network === "testnet" ? "https://test.rpc.fastnear.com" : "http://127.0.0.1:3030"),
     rpcFallbacks: (
       e.NEAR_RPC_FALLBACKS ??
       (network === "testnet" ? "https://rpc.testnet.fastnear.com,https://rpc.testnet.near.org" : "")

@@ -9,6 +9,8 @@ const csv = readFileSync(new URL("../../../samples/payees.csv", import.meta.url)
 const draft = validateCsv(csv, "18.50", () => new Uint8Array(32).fill(1)).draft!;
 draft.txs = { 0: { assign: ["t0"], settle: ["t1"] } };
 draft.exclusion_reasons = { 2: "ACCOUNT_CLOSED" };
+draft.oracle_sigs = { 0: "c2lnMA==", 2: "c2lnMg==" };
+draft.assigned_at_ns = { 0: "10", 1: "11", 2: "12" };
 
 const batch: BatchView = {
   id: "4",
@@ -110,6 +112,11 @@ describe("buildReceiptBody", () => {
     expect(body.payouts[0].payee_ref).toBe(expectedRef);
     expect(body.payouts[0].clabe_last4).toBe("7771");
     expect(JSON.stringify(body)).not.toMatch(/Lucía|002010077777777771/);
+  });
+  it("includes the oracle signature and assign time per payout (spec §8)", () => {
+    expect(body.payouts[0]).toMatchObject({ oracle_sig: "c2lnMA==", assigned_at_ns: "10" });
+    expect(body.payouts[2]).toMatchObject({ oracle_sig: "c2lnMg==", assigned_at_ns: "12" });
+    expect(body.payouts[1]).toMatchObject({ oracle_sig: null, assigned_at_ns: "11" });
   });
   it("carries the label and batch identity", () => {
     expect(body.label).toMatch(/Testnet prototype/);

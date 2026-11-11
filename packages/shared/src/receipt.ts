@@ -26,6 +26,9 @@ export interface ReceiptPayout {
   final_deadline_ns: string;
   delivered_at_ns: string | null;
   proof_ref: string | null;
+  /** oracle's ed25519 signature (base64) over the delivery proof or exclusion */
+  oracle_sig: string | null;
+  assigned_at_ns: string | null;
   penalties_total: string;
   txs: Record<string, string[]>;
 }

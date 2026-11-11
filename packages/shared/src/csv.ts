@@ -37,7 +37,8 @@ export function parsePayeeCsv(text: string): { rows: PayeeRow[]; errors: RowErro
     const row = i + 2;
     const [name = "", clabe = "", amount_mxn = ""] = rec;
     let reason: string | null = null;
-    if (!name) reason = "missing_name";
+    if (rec.length !== 3) reason = "bad_column_count";
+    else if (!name) reason = "missing_name";
     else if (!clabe) reason = "missing_clabe";
     else if (!amount_mxn) reason = "missing_amount";
     else if (!AMOUNT.test(amount_mxn) || Number(amount_mxn) <= 0) reason = "bad_amount";

@@ -32,6 +32,11 @@ describe("validateCsv", () => {
     expect(r.errors).toEqual([{ row: 5, reason: "clabe_check_digit" }]);
     expect(r.draft).toBeUndefined();
   });
+  it("rejects payouts below the contract minimum (1 USDC) before the DAO votes", () => {
+    const r = validateCsv("name,clabe,amount_mxn\nA,002010077777777771,0.50\n", "18.50", salt(1));
+    expect(r.ok).toBe(false);
+    expect(r.errors).toEqual([{ row: 2, reason: "below_min_payout" }]);
+  });
   it("never returns a full CLABE", () => {
     const r = validateCsv(sample("payees.csv"), "18.50", salt(1));
     const { draft, ...publicPart } = r;

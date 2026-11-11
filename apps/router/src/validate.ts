@@ -6,6 +6,9 @@ import { lockedFor, mxnToUsdcUnits } from "@elivo/shared/money";
 import canonicalize from "canonicalize";
 import type { Draft } from "./store.ts";
 
+/** The escrow's `min_payout` (1 USDC). Smaller payouts would make the whole funding transfer bounce after the vote. */
+export const MIN_PAYOUT_UNITS = 1_000_000n;
+
 export interface ValidationResult {
   ok: boolean;
   errors: RowError[];
@@ -19,7 +22,15 @@ export function validateCsv(
   rate: string,
   newSalt: () => Uint8Array = () => randomBytes(32),
 ): ValidationResult {
-  const { rows, errors } = parsePayeeCsv(text);
+  const parsed = parsePayeeCsv(text);
+  const errors = [...parsed.errors];
+  const valid = parsed.rows.filter((r) => {
+    if (mxnToUsdcUnits(r.amount_mxn, rate) >= MIN_PAYOUT_UNITS) return true;
+    errors.push({ row: r.row, reason: "below_min_payout" });
+    return false;
+  });
+  errors.sort((a, b) => a.row - b.row);
+  const rows = valid;
   const amounts = rows.map((r) => mxnToUsdcUnits(r.amount_mxn, rate));
   const publicRows = rows.map((r, i) => ({
     row: r.row,

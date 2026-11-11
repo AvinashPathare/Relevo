@@ -45,6 +45,8 @@ export function buildReceiptBody(
       final_deadline_ns: p.final_deadline_ns,
       delivered_at_ns: p.delivered_at_ns,
       proof_ref: p.proof_ref,
+      oracle_sig: draft.oracle_sigs?.[p.id] ?? null,
+      assigned_at_ns: draft.assigned_at_ns?.[p.id] ?? null,
       penalties_total: p.penalties_total,
       txs: structuredClone(draft.txs[p.id] ?? {}), // a copy: later records must not alter a signed receipt
     };

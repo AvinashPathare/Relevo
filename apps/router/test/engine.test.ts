@@ -316,3 +316,88 @@ describe("engine request budget", () => {
     expect(counts).toEqual({ get_batch_payouts: 1 });
   });
 });
+
+describe("engine review fixes", () => {
+  it("links only the DAO's batch whose amounts match the draft, not a copycat with the same hash", async () => {
+    const w = world();
+    w.deps.proposal = { daoId: "dao", usdcId: "usdc", cutoffInS: 40, deadlineInS: 300 };
+    w.state.batchCount = 2;
+    const view = w.deps.chain.view.bind(w.deps.chain);
+    w.deps.chain.view = async <T>(c: string, m: string, a?: object): Promise<T> => {
+      const id = (a as { batch_id?: string } | undefined)?.batch_id;
+      if (m === "get_batch")
+        return {
+          id,
+          batch_hash: w.draft.batch_hash,
+          funder: id === "0" ? "attacker" : "dao",
+          receipt_hash: null,
+          payout_count: 1,
+        } as T;
+      if (m === "get_batch_payouts" && id === "0")
+        return [{ ...w.state.payout, batch_id: "0", amount: "1000000" }] as T;
+      return view<T>(c, m, a);
+    };
+    await new Engine(w.deps).tick();
+    expect(w.store.get(w.draft.id)?.onchain_batch_id).toBe("1");
+  });
+
+  it("re-sends an order the current firm never received", async () => {
+    const w = world({ state: "Assigned", firm: "mx3", firms_tried: ["mx3"] });
+    w.store.update(w.draft.id, (d) => {
+      d.onchain_batch_id = "0";
+    });
+    const orders: string[] = [];
+    w.deps.firmClient.order = async (url) => {
+      orders.push(url);
+    };
+    const e = new Engine(w.deps);
+    await e.tick();
+    await e.tick();
+    expect(orders).toEqual(["mx3"]);
+    expect(w.store.get(w.draft.id)?.orders_sent?.[0]).toBe("mx3");
+  });
+
+  it("keeps anchoring blocked until the refund after an exclusion is recorded", async () => {
+    const w = world({ state: "Assigned", firm: "mx3", firms_tried: ["mx3"] });
+    w.store.update(w.draft.id, (d) => {
+      d.onchain_batch_id = "0";
+      d.orders_sent = { 0: "mx3" };
+    });
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const orig = w.deps.router.call;
+    w.deps.router.call = async (c, m, a, o) => {
+      if (m === "exclude") {
+        w.state.payout = { ...w.state.payout, excluded: true };
+        return orig(c, m, a, o);
+      }
+      if (m === "refund") {
+        w.state.payout = { ...w.state.payout, state: "Refunded" };
+        const r = await orig(c, m, a, o);
+        await gate; // the refund landed but has not returned to the router yet
+        return r;
+      }
+      return orig(c, m, a, o);
+    };
+    const e = new Engine(w.deps);
+    const x = {
+      batch_id: "0",
+      payout_id: 0,
+      firm_id: "mx3",
+      reason_code: 1,
+      observed_at_ns: "1",
+      nonce: "5",
+    };
+    const pending = e.submitExclusion(x, "c2ln");
+    await new Promise((r) => setTimeout(r, 10));
+    await e.tick();
+    expect(w.calls.filter((c) => c.method === "anchor_receipt")).toHaveLength(0);
+    release();
+    await pending;
+    await e.tick();
+    expect(w.calls.filter((c) => c.method === "anchor_receipt")).toHaveLength(1);
+    expect(w.store.get(w.draft.id)?.receipt?.payouts[0].txs.refund).toHaveLength(1);
+  });
+});

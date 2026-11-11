@@ -47,6 +47,11 @@ describe("parsePayeeCsv", () => {
       { row: 6, reason: "missing_amount" },
     ]);
   });
+  it("rejects rows with extra columns instead of silently truncating the amount", () => {
+    const r = parsePayeeCsv(`${header}Ana,002010077777777771,25,000.00\n`);
+    expect(r.errors).toEqual([{ row: 2, reason: "bad_column_count" }]);
+    expect(r.rows).toEqual([]);
+  });
   it("rejects zero amounts", () => {
     expect(parsePayeeCsv(`${header}A,002010077777777771,0.00\n`).errors).toEqual([
       { row: 2, reason: "bad_amount" },

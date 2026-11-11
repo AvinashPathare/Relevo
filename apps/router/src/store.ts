@@ -15,6 +15,12 @@ export interface Draft {
   /** payout id → kind (assign/reroute/settle/exclude/refund/anchor) → tx hashes */
   txs: Record<number, Record<string, string[]>>;
   exclusion_reasons: Record<number, string>;
+  /** payout id → oracle signature (base64) of the proof or exclusion that closed it */
+  oracle_sigs?: Record<number, string>;
+  /** payout id → chain time (ns) of the first assignment */
+  assigned_at_ns?: Record<number, string>;
+  /** payout id → firm the current order was sent to (orders are re-sent if missing) */
+  orders_sent?: Record<number, string>;
   receipt?: Receipt;
   /** tx hash of anchor_receipt once the receipt hash is on-chain */
   anchor_tx?: string;
