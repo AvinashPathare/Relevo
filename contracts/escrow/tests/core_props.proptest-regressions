@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc f91d2ae378e373cef3df33b886ffed19bbbc78aced0c090d1fb80c34ea8116de # shrinks to ops = [Fund { amounts: [1000000, 1000000, 1000000, 1000000, 1000000], cut_s: 1, extra_s: 1 }, PostBond { firm: 2, amount: 50000 }, Assign { payout: 4, firm: 2, bps: 0 }, Advance { ns: 2001000000001 }, Refund { payout: 4 }]
+cc 3bca329d3483e3d82fdaef02d8fcad15ac3f8e926be5d1b39488d4ea4beefaeb # shrinks to ops = [PostBond { firm: 1, amount: 50424090 }, Fund { amounts: [1000000], cut_s: 1, extra_s: 1 }, Fund { amounts: [1000000, 1000000, 1000000], cut_s: 1, extra_s: 1 }, Assign { payout: 3, firm: 1, bps: 0 }, Settle { payout: 3, firm: 1, back_s: 0 }]

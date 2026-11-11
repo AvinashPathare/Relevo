@@ -215,8 +215,11 @@ may never move funds or block `settle`, `refund` or `claim`.
 | views | anyone | `get_batch`, `get_payout`, `get_batch_payouts`, `get_firm`, `get_config`, `get_claimable` |
 
 `fund_batch` message:
-`{ "kind": "fund_batch", "batch_hash": "<hex32>", "payouts": [{ "id": 0, "amount": "<u128>",
-"cutoff_in_ns": "<u64>", "deadline_in_ns": "<u64>" }] }`. Ids run `0..n-1` and `n ≤ 50`.
+`{ "kind": "fund_batch", "batch_hash": "<hex32>", "router_id": "<account>", "oracle_pk":
+"ed25519:<b58>", "payouts": [{ "id": 0, "amount": "<u128>", "cutoff_in_ns": "<u64>", "deadline_in_ns":
+"<u64>" }] }`. `router_id` and `oracle_pk` must equal the live config (else `config_mismatch`, full
+refund), so a config change made between a DAO vote and its execution cannot capture the batch.
+`deadline_in_ns` is at most 30 days. A first `storage_deposit` for an account must be at least 0.01 NEAR. Ids run `0..n-1` and `n ≤ 50`.
 Each `amount ≥ min_payout`, `0 < cutoff_in < deadline_in`, and the transferred total must equal
 `Σ locked` exactly.
 

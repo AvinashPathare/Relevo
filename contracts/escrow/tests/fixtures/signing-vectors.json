@@ -1,0 +1,48 @@
+[
+  {
+    "domain": "elivo-quote-v1",
+    "escrow_id": "escrow.test.near",
+    "payload": {
+      "batch_id": "1",
+      "payout_id": 2,
+      "firm_id": "mx1.test.near",
+      "quote_bps": 20
+    },
+    "message_hex": "0e000000656c69766f2d71756f74652d763110000000657363726f772e746573742e6e6561720100000000000000020000000d0000006d78312e746573742e6e6561721400",
+    "seed_hex": "0707070707070707070707070707070707070707070707070707070707070707",
+    "public_key_b58": "GmaDrppBC7P5ARKV8g3djiwP89vz1jLK23V2GBjuAEGB",
+    "signature_hex": "23c6cdc28057498c76aeb1678bbf9a272116f7c2f7d20088e18116bde416a5af5b1d12b31dc8b09dcc288099e68b71c91e464ef2d4c25a7014b32898ba064709"
+  },
+  {
+    "domain": "elivo-proof-v1",
+    "escrow_id": "escrow.test.near",
+    "payload": {
+      "batch_id": "1",
+      "payout_id": 2,
+      "firm_id": "mx1.test.near",
+      "delivered_at_ns": "1731300000000000000",
+      "proof_ref": "CEP-SIM-0001",
+      "nonce": "42"
+    },
+    "message_hex": "0e000000656c69766f2d70726f6f662d763110000000657363726f772e746573742e6e6561720100000000000000020000000d0000006d78312e746573742e6e6561720040a25b2dd006180c0000004345502d53494d2d303030312a00000000000000",
+    "seed_hex": "0707070707070707070707070707070707070707070707070707070707070707",
+    "public_key_b58": "GmaDrppBC7P5ARKV8g3djiwP89vz1jLK23V2GBjuAEGB",
+    "signature_hex": "a3d91c77b5e55173e93fe1d31c05f5a03c89402d24d5696b42c83eb0539f3f84c8717c82409bd2e51a25fbfdeba107198c57adce82aeeef68ffe55b5a405e30c"
+  },
+  {
+    "domain": "elivo-exclusion-v1",
+    "escrow_id": "escrow.test.near",
+    "payload": {
+      "batch_id": "1",
+      "payout_id": 3,
+      "firm_id": "mx2.test.near",
+      "reason_code": 1,
+      "observed_at_ns": "1731300000000000000",
+      "nonce": "43"
+    },
+    "message_hex": "12000000656c69766f2d6578636c7573696f6e2d763110000000657363726f772e746573742e6e6561720100000000000000030000000d0000006d78322e746573742e6e656172010040a25b2dd006182b00000000000000",
+    "seed_hex": "0707070707070707070707070707070707070707070707070707070707070707",
+    "public_key_b58": "GmaDrppBC7P5ARKV8g3djiwP89vz1jLK23V2GBjuAEGB",
+    "signature_hex": "1f7512c80cbdfae32f54a0df718398ca855aa1a16e9a93f73173d3ecaca8aa5093f56592e55d678da3d527787f09f4219485483fd1121759e53efdb9235f5406"
+  }
+]

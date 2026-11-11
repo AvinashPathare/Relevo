@@ -1,0 +1,25 @@
+[package]
+name = "elivo-escrow"
+description = "Elivo Payout Guard escrow, bond vault and receipt registry (testnet prototype, unaudited)"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = { workspace = true }
+serde_json = { workspace = true }
+hex = { workspace = true }
+
+[dev-dependencies]
+near-sdk = { workspace = true, features = ["unit-testing"] }
+proptest = { workspace = true }
+ed25519-dalek = { workspace = true }
+bs58 = { workspace = true }
+near-workspaces = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+serde_json = { workspace = true }
