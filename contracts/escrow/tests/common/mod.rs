@@ -190,7 +190,7 @@ pub fn locked_total(amounts: &[u128]) -> u128 {
     amounts.iter().map(|a| a + a * 25 / 10_000).sum()
 }
 
-pub fn fund_msg(amounts: &[u128], cut_s: u64, dl_s: u64) -> String {
+pub fn fund_msg(env: &Env, amounts: &[u128], cut_s: u64, dl_s: u64) -> String {
     let payouts: Vec<Value> = amounts
         .iter()
         .enumerate()
@@ -199,7 +199,9 @@ pub fn fund_msg(amounts: &[u128], cut_s: u64, dl_s: u64) -> String {
             "cutoff_in_ns": (cut_s * S).to_string(), "deadline_in_ns": (dl_s * S).to_string() })
         })
         .collect();
-    json!({ "kind": "fund_batch", "batch_hash": "cd".repeat(32), "payouts": payouts }).to_string()
+    json!({ "kind": "fund_batch", "batch_hash": "cd".repeat(32), "router_id": env.router.id(),
+        "oracle_pk": near_pk(&env.oracle), "payouts": payouts })
+    .to_string()
 }
 
 /// Funds a batch from `env.funder`; returns the batch id.
@@ -210,7 +212,7 @@ pub async fn fund(env: &Env, amounts: &[u128], cut_s: u64, dl_s: u64) -> anyhow:
         &env.funder,
         env.escrow.id().as_str(),
         locked_total(amounts),
-        &fund_msg(amounts, cut_s, dl_s),
+        &fund_msg(env, amounts, cut_s, dl_s),
     )
     .await?;
     let after = batch_count(env).await?;

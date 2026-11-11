@@ -82,8 +82,9 @@ pub fn fund_msg(amounts: &[u128], cut_s: u64, dl_s: u64) -> String {
                 "cutoff_in_ns": (cut_s * S).to_string(), "deadline_in_ns": (dl_s * S).to_string() })
         })
         .collect();
-    serde_json::json!({ "kind": "fund_batch", "batch_hash": "ab".repeat(32), "payouts": payouts })
-        .to_string()
+    serde_json::json!({ "kind": "fund_batch", "batch_hash": "ab".repeat(32),
+        "router_id": router(), "oracle_pk": String::from(&near_pk(&oracle())), "payouts": payouts })
+    .to_string()
 }
 
 pub fn locked_total(amounts: &[u128]) -> u128 {
@@ -284,4 +285,66 @@ fn views_return_strings_for_numbers() {
     let cfg = serde_json::to_value(c.get_config()).unwrap();
     assert_eq!(cfg["period_ns"], "10000000000");
     assert_eq!(c.list_firms().len(), 3);
+}
+
+fn msg_with(router_id: &str, oracle_pk: &str, amounts: &[u128]) -> String {
+    let mut v: serde_json::Value = serde_json::from_str(&fund_msg(amounts, 60, 600)).unwrap();
+    v["router_id"] = router_id.into();
+    v["oracle_pk"] = oracle_pk.into();
+    v.to_string()
+}
+
+#[test]
+#[should_panic(expected = "config_mismatch")]
+fn fund_with_rotated_router_refunds() {
+    let mut c = ready_contract();
+    call(&token(), T0);
+    let oracle = String::from(&near_pk(&oracle()));
+    let _ = c.ft_on_transfer(
+        funder(),
+        U128(locked_total(&[1_000_000])),
+        msg_with("evil.near", &oracle, &[1_000_000]),
+    );
+}
+
+#[test]
+#[should_panic(expected = "config_mismatch")]
+fn fund_with_rotated_oracle_refunds() {
+    let mut c = ready_contract();
+    call(&token(), T0);
+    let evil = String::from(&near_pk(&key(66)));
+    let _ = c.ft_on_transfer(
+        funder(),
+        U128(locked_total(&[1_000_000])),
+        msg_with("router.near", &evil, &[1_000_000]),
+    );
+}
+
+#[test]
+#[should_panic(expected = "bad_msg")]
+fn fund_without_pinned_config_refunds() {
+    let mut c = ready_contract();
+    call(&token(), T0);
+    let mut v: serde_json::Value = serde_json::from_str(&fund_msg(&[1_000_000], 60, 600)).unwrap();
+    v.as_object_mut().unwrap().remove("router_id");
+    v.as_object_mut().unwrap().remove("oracle_pk");
+    let _ = c.ft_on_transfer(funder(), U128(locked_total(&[1_000_000])), v.to_string());
+}
+
+#[test]
+#[should_panic(expected = "deposit_below_minimum")]
+fn storage_deposit_one_yocto_rejected() {
+    let mut c = new_contract();
+    ctx(&acc("griefer.near"), NearToken::from_yoctonear(1), T0);
+    c.storage_deposit(Some(acc("victim1.near")));
+}
+
+#[test]
+fn storage_deposit_minimum_accepted_and_topups_any_size() {
+    let mut c = new_contract();
+    ctx(&funder(), NearToken::from_millinear(10), T0);
+    c.storage_deposit(None);
+    ctx(&funder(), NearToken::from_yoctonear(1), T0);
+    c.storage_deposit(None);
+    assert_eq!(c.storage_balance_of(funder()).0, 10u128.pow(22) + 1);
 }

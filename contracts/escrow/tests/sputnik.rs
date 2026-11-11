@@ -54,7 +54,7 @@ fn proposal_kind(env: &Env, amounts: &[u128], cut_s: u64, dl_s: u64) -> Value {
     let args = json!({
         "receiver_id": env.escrow.id(),
         "amount": locked_total(amounts).to_string(),
-        "msg": fund_msg(amounts, cut_s, dl_s),
+        "msg": fund_msg(env, amounts, cut_s, dl_s),
     });
     json!({ "FunctionCall": {
         "receiver_id": env.usdc.id(),

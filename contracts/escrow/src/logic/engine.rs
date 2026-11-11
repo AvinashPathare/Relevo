@@ -8,6 +8,9 @@ use super::types::{CoreError, Firm, Outcome, Params, Payout, PayoutIn, PayoutSta
 
 type R<T> = Result<T, CoreError>;
 
+/// Longest allowed final deadline after funding, so a typo can't lock a payout forever.
+pub const MAX_DEADLINE_IN_NS: u64 = 30 * 86_400 * 1_000_000_000;
+
 pub fn new_payouts(p: &Params, items: &[PayoutIn], transferred: u128, now: u64) -> R<Vec<Payout>> {
     if items.is_empty() {
         return Err(CoreError::EmptyBatch);
@@ -23,7 +26,10 @@ pub fn new_payouts(p: &Params, items: &[PayoutIn], transferred: u128, now: u64) 
         if it.amount < p.min_payout {
             return Err(CoreError::BelowMinPayout);
         }
-        if it.cutoff_in_ns == 0 || it.cutoff_in_ns >= it.deadline_in_ns {
+        if it.cutoff_in_ns == 0
+            || it.cutoff_in_ns >= it.deadline_in_ns
+            || it.deadline_in_ns > MAX_DEADLINE_IN_NS
+        {
             return Err(CoreError::BadTiming);
         }
         total = total.saturating_add(locked_for(p, it.amount));
@@ -350,6 +356,16 @@ mod tests {
             new_payouts(&p(), &items_with(&[1_000_000], 10, 10), t, NOW),
             Err(CoreError::BadTiming)
         );
+    }
+    #[test]
+    fn new_payouts_rejects_deadline_over_30_days() {
+        let t = total(&[1_000_000]);
+        let day = 86_400 * S;
+        assert_eq!(
+            new_payouts(&p(), &items_with(&[1_000_000], 60, 30 * day + 1), t, NOW),
+            Err(CoreError::BadTiming)
+        );
+        assert!(new_payouts(&p(), &items_with(&[1_000_000], 60, 30 * day), t, NOW).is_ok());
     }
     #[test]
     fn new_payouts_rejects_below_min() {

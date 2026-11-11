@@ -2,12 +2,16 @@
 SHELL := /bin/bash
 CARGO ?= $(shell command -v cargo 2>/dev/null || echo $(HOME)/.cargo/bin/cargo)
 RES := contracts/res
+# Strip machine-specific paths from panic locations embedded in the wasm.
+REMAP := --remap-path-prefix=$(HOME)/.cargo/registry/src=/cargo/registry --remap-path-prefix=$(HOME)/.cargo/git=/cargo/git --remap-path-prefix=$(HOME)/.rustup=/rustup --remap-path-prefix=$(CURDIR)=/elivo
+NEAR_BUILD := $(CARGO) near build non-reproducible-wasm --no-abi --env "RUSTFLAGS=$(REMAP)"
 
 .PHONY: wasm test-contracts fmt lint sputnik deploy-testnet
 
 wasm:
-	$(CARGO) near build non-reproducible-wasm --manifest-path contracts/mock-usdc/Cargo.toml --no-abi --out-dir target/near/mock_usdc
-	$(CARGO) near build non-reproducible-wasm --manifest-path contracts/escrow/Cargo.toml --no-abi --out-dir target/near/elivo_escrow
+	$(NEAR_BUILD) --manifest-path contracts/mock-usdc/Cargo.toml --out-dir target/near/mock_usdc
+	$(NEAR_BUILD) --manifest-path contracts/escrow/Cargo.toml --out-dir target/near/elivo_escrow
+	@! strings target/near/*/*.wasm | grep -q "$(HOME)" || (echo "wasm contains local paths"; exit 1)
 	cp target/near/mock_usdc/mock_usdc.wasm $(RES)/mock_usdc.wasm
 	cp target/near/elivo_escrow/elivo_escrow.wasm $(RES)/elivo_escrow.wasm
 	@ls -la $(RES)/*.wasm

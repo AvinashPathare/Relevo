@@ -16,11 +16,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install cargo-near
-        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/latest/download/cargo-near-installer.sh | sh
+      - name: Install cargo-near 0.23.0
+        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-v0.23.0/cargo-near-installer.sh | sh
       - name: Format
         run: cargo fmt --all --check
       - name: Lint
         run: cargo clippy --workspace --all-targets -- -D warnings
-      - name: Build wasm and test contracts
+      - name: Test the committed wasm (what `make demo` deploys)
+        run: make sputnik && cargo test --workspace
+      - name: Rebuild wasm from source and test again
         run: make test-contracts

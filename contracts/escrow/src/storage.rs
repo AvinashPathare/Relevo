@@ -4,14 +4,24 @@ use near_sdk::{env, near, require, AccountId};
 
 use crate::{Escrow, EscrowExt};
 
+/// Minimum first deposit for an account (0.01 NEAR): a new credit entry costs the contract
+/// storage, so it must be paid for. Top-ups of an existing entry may be any size.
+pub const MIN_NEW_STORAGE_DEPOSIT: u128 = 10_000_000_000_000_000_000_000;
+
 #[near]
 impl Escrow {
     #[payable]
     pub fn storage_deposit(&mut self, account_id: Option<AccountId>) -> U128 {
         let account = account_id.unwrap_or_else(env::predecessor_account_id);
         let add = env::attached_deposit().as_yoctonear();
-        require!(add > 0, "deposit required");
-        let bal = self.storage_credit.get(&account).copied().unwrap_or(0) + add;
+        let existing = self.storage_credit.get(&account).copied();
+        let min = if existing.is_some() {
+            1
+        } else {
+            MIN_NEW_STORAGE_DEPOSIT
+        };
+        require!(add >= min, "deposit_below_minimum");
+        let bal = existing.unwrap_or(0) + add;
         self.storage_credit.insert(account, bal);
         U128(bal)
     }

@@ -194,7 +194,7 @@ async fn paused_contract() -> anyhow::Result<()> {
         &env.funder,
         env.escrow.id().as_str(),
         locked_total(&[AMT]),
-        &fund_msg(&[AMT], 60, 600),
+        &fund_msg(&env, &[AMT], 60, 600),
     )
     .await?;
     assert_eq!(
@@ -259,7 +259,7 @@ async fn wrong_token_refunded() -> anyhow::Result<()> {
         &env.funder,
         env.escrow.id().as_str(),
         locked_total(&[AMT]),
-        &fund_msg(&[AMT], 60, 600),
+        &fund_msg(&env, &[AMT], 60, 600),
     )
     .await?;
     assert_eq!(balance_on(&fake, env.funder.id().as_str()).await?, before);

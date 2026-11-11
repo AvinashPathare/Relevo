@@ -7,7 +7,7 @@ use near_sdk::{env, near, require, AccountId, PromiseOrValue};
 use crate::events::emit;
 use crate::logic::engine;
 use crate::logic::types::PayoutIn;
-use crate::{Batch, Escrow, EscrowExt};
+use crate::{pk_string, Batch, Escrow, EscrowExt};
 
 #[near(serializers = [json])]
 pub struct PayoutInJson {
@@ -20,8 +20,12 @@ pub struct PayoutInJson {
 #[near(serializers = [json])]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum TransferMsg {
+    /// `router_id` and `oracle_pk` must equal the live config, so a DAO proposal voted earlier
+    /// cannot be captured by a config change made before it executes (refunds on mismatch).
     FundBatch {
         batch_hash: String,
+        router_id: AccountId,
+        oracle_pk: String,
         payouts: Vec<PayoutInJson>,
     },
     PostBond,
@@ -41,8 +45,16 @@ impl Escrow {
         match parsed {
             TransferMsg::FundBatch {
                 batch_hash,
+                router_id,
+                oracle_pk,
                 payouts,
-            } => self.fund_batch(sender_id, amount.0, batch_hash, payouts),
+            } => {
+                require!(
+                    router_id == self.router_id && oracle_pk == pk_string(&self.oracle_pk),
+                    "config_mismatch"
+                );
+                self.fund_batch(sender_id, amount.0, batch_hash, payouts)
+            }
             TransferMsg::PostBond => self.post_bond(sender_id, amount.0),
         }
         PromiseOrValue::Value(U128(0))
