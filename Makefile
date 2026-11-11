@@ -3,7 +3,7 @@ SHELL := /bin/bash
 CARGO ?= $(shell command -v cargo 2>/dev/null || echo $(HOME)/.cargo/bin/cargo)
 RES := contracts/res
 
-.PHONY: wasm test-contracts fmt lint
+.PHONY: wasm test-contracts fmt lint sputnik
 
 wasm:
 	$(CARGO) near build non-reproducible-wasm --manifest-path contracts/mock-usdc/Cargo.toml --no-abi --out-dir target/near/mock_usdc
@@ -12,7 +12,10 @@ wasm:
 	cp target/near/elivo_escrow/elivo_escrow.wasm $(RES)/elivo_escrow.wasm
 	@ls -la $(RES)/*.wasm
 
-test-contracts: wasm
+sputnik:
+	node scripts/fetch-sputnik.mjs
+
+test-contracts: wasm sputnik
 	$(CARGO) test --workspace
 
 fmt:
