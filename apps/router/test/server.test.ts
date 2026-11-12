@@ -112,4 +112,38 @@ describe("router server", () => {
     expect((await app.inject({ method: "GET", url: "/samples/..%2Fpackage.json" })).statusCode).toBe(404);
     expect((await app.inject({ method: "GET", url: "/samples/other.csv" })).statusCode).toBe(404);
   });
+
+  it("GET /quote/payin proxies the quoter and validates the amount", async () => {
+    const store = new Store(null);
+    const engine = new Engine({
+      chain: { view: async () => ({}) as never, blockTimeNs: async () => 0n, explorerTx: () => null },
+      router: { accountId: "r", call: async () => ({ txHash: "", logs: [] }) },
+      escrowId: "e",
+      store,
+      firms: [],
+      firmClient: {} as never,
+      graceNs: 0n,
+      receiptKey: keyFromSeed(new Uint8Array(32).fill(1)),
+      network: "sandbox",
+    });
+    const seen: string[] = [];
+    const app = createRouterServer(engine, {
+      payin: {
+        tokens: async () => [],
+        quote: async (a, n) => {
+          seen.push(`${a}:${n}`);
+          return { ok: false, reason: "timeout" };
+        },
+      },
+    });
+    const r = await app.inject({
+      method: "GET",
+      url: "/quote/payin?asset=nep141:eth.omft.near&amount=9022500000",
+    });
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toEqual({ ok: false, reason: "timeout" });
+    expect(seen).toEqual(["nep141:eth.omft.near:9022500000"]);
+    expect((await app.inject({ method: "GET", url: "/quote/payin?asset=x&amount=-1" })).statusCode).toBe(400);
+    expect((await app.inject({ method: "GET", url: "/quote/assets" })).json()).toHaveLength(4);
+  });
 });

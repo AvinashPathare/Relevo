@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { PayinPanel } from "../../components/PayinPanel.tsx";
 import {
   type RouterConfig,
   type ValidateResponse,
@@ -71,6 +72,7 @@ export default function NewBatchPage() {
       </p>
       {error && <p className="bad">{error}</p>}
       {result && <ValidationView result={result} config={config} />}
+      {result?.ok && result.total_locked && <PayinPanel totalLockedUnits={result.total_locked} />}
     </>
   );
 }

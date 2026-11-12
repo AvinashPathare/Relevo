@@ -5,11 +5,14 @@ import type { BatchView, PayoutView } from "@elivo/shared/views";
 import Fastify, { type FastifyInstance } from "fastify";
 import { councilOf, findProposalForDraft } from "./dao.ts";
 import type { Engine } from "./engine.ts";
+import { createPayinQuoter, PAYIN_ASSETS, type PayinQuoter } from "./payin.ts";
 import { validateCsv } from "./validate.ts";
 
 export interface ServerOptions {
   rate?: string;
   firmUrls?: Record<string, string>;
+  /** 1Click pay-in quoter (injectable for tests). */
+  payin?: PayinQuoter;
 }
 
 const bigintSafe = (_k: string, v: unknown) => (typeof v === "bigint" ? v.toString() : v);
@@ -28,6 +31,16 @@ export function createRouterServer(engine: Engine, opts: ServerOptions = {}): Fa
     if (!SAMPLES.has(req.params.name)) return reply.code(404).send({ error: "unknown_sample" });
     const text = readFileSync(new URL(`../../../samples/${req.params.name}`, import.meta.url), "utf8");
     return reply.type("text/csv; charset=utf-8").send(text);
+  });
+
+  const payin = opts.payin ?? createPayinQuoter();
+  app.get("/quote/assets", async () =>
+    Object.entries(PAYIN_ASSETS).map(([id, a]) => ({ id, symbol: a.symbol, chain: a.chain })),
+  );
+  app.get<{ Querystring: { asset?: string; amount?: string } }>("/quote/payin", async (req, reply) => {
+    const { asset = "", amount = "" } = req.query;
+    if (!/^[1-9]\d{0,30}$/.test(amount)) return reply.code(400).send({ ok: false, reason: "bad_amount" });
+    return payin.quote(asset, amount);
   });
 
   app.get("/config", async () => ({
