@@ -6,11 +6,12 @@
  * Testnet prototype. Payout firms and SPEI receipts are simulated. Contract unaudited.
  */
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { env, loadDeployment } from "@elivo/shared/config";
 import { LABEL } from "@elivo/shared/receipt";
 import { createDemoSigner, DEMO_SIGNER_LABEL } from "./lib/demo-signer.ts";
-import { onStop, startCommand, stopAll, waitHealthy } from "./lib/procs.ts";
+import { onStop, setLogDir, startCommand, stopAll, waitHealthy } from "./lib/procs.ts";
 import { setupSandbox, setupTestnet, startServices } from "./lib/stack.ts";
 
 const arg = (k: string) => (process.argv.includes(k) ? process.argv[process.argv.indexOf(k) + 1] : undefined);
@@ -19,6 +20,10 @@ const readOnly = process.argv.includes("--read-only");
 const WEB_PORT = Number(process.env.WEB_PORT ?? 3000);
 const SIGNER_PORT = Number(process.env.DEMO_SIGNER_PORT ?? 7430);
 const e = env({ ...process.env, ELIVO_NETWORK: network });
+// Logs and the router store live outside the repo while the web app runs: Turbopack watches the
+// whole workspace, and with a browser connected, writes under .data/ trigger page reloads.
+const devDir = process.env.ELIVO_DEV_DIR ?? join(tmpdir(), "elivo-dev");
+setLogDir(join(devDir, "logs"));
 
 function startWeb(webEnv: Record<string, string>) {
   startCommand(
@@ -47,7 +52,10 @@ async function main() {
   } else {
     const s = network === "testnet" ? await setupTestnet() : await setupSandbox();
     onStop(s.stop);
-    const routerStore = network === "testnet" ? ".data/router-testnet-dev.json" : undefined;
+    const routerStore = join(
+      devDir,
+      network === "testnet" ? "router-testnet.json" : `router-sandbox-${Date.now()}.json`,
+    );
     const { urls, depFile } = await startServices(s, network, e, { routerStore });
     const webEnv: Record<string, string> = {
       ELIVO_NETWORK: network,
@@ -69,7 +77,7 @@ async function main() {
     }
     await startWeb(webEnv);
     console.log(
-      "Services: router, proof oracle, firms MX-1, MX-2, MX-3 (MX-3 is configured to be late). Logs in .data/logs/",
+      `Services: router, proof oracle, firms MX-1, MX-2, MX-3 (MX-3 is configured to be late). Logs in ${join(devDir, "logs")}`,
     );
     console.log(`Open http://localhost:${WEB_PORT}/new`);
   }

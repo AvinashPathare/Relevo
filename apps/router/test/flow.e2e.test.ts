@@ -9,9 +9,11 @@ import { join } from "node:path";
 import { createFirm } from "@elivo/firm-sim/firm";
 import { createOracle, type Order } from "@elivo/oracle/oracle";
 import { clabeLast4 } from "@elivo/shared/clabe";
+import { parseElivoEvents } from "@elivo/shared/events";
 import { formatUsdc } from "@elivo/shared/money";
+import { scoreboardFromEvents, scoreboardFromFirms } from "@elivo/shared/scoreboard";
 import { type LocalStack, startLocalStack } from "@elivo/shared/testing/localstack";
-import type { PayoutView } from "@elivo/shared/views";
+import type { FirmView, PayoutView } from "@elivo/shared/views";
 import { buildStatus, loadChainViews, type RouterBatchStatus } from "@elivo/web/lib/status";
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -266,5 +268,33 @@ describe("full payout flow on the sandbox", () => {
     expect(model.rows.map((r) => r.payee)).toEqual(
       rows.map(([name, clabe]) => `${name} ****${clabeLast4(clabe)}`),
     );
+  });
+
+  it("(i) F16: the scoreboard recomputed from events equals the contract's counters", async () => {
+    const { chain, deployment: d } = stack;
+    const events = parseElivoEvents(chain.calls.flatMap((c) => c.logs ?? []));
+    const views = await chain.view<PayoutView[]>(d.escrow, "get_batch_payouts", { batch_id: batchId });
+    const amounts = Object.fromEntries(views.map((p) => [`${p.batch_id}:${p.id}`, p.amount]));
+    const fromEvents = scoreboardFromEvents(events, amounts);
+    const fromChain = scoreboardFromFirms(
+      await chain.view<Array<[string, FirmView]>>(d.escrow, "list_firms"),
+    );
+    expect(Object.values(fromChain).some((f) => f.onTime + f.late > 0)).toBe(true);
+    for (const [id, c] of Object.entries(fromChain)) {
+      const e = fromEvents[id] ?? { onTime: 0, late: 0, penaltiesPaid: "0", volume: "0" };
+      expect({
+        id,
+        onTime: e.onTime,
+        late: e.late,
+        penaltiesPaid: e.penaltiesPaid,
+        volume: e.volume,
+      }).toEqual({
+        id,
+        onTime: c.onTime,
+        late: c.late,
+        penaltiesPaid: c.penaltiesPaid,
+        volume: c.volume,
+      });
+    }
   });
 });

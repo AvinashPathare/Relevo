@@ -1,8 +1,14 @@
-/** Child-process helpers for the demo: spawn with logs to .data/logs, wait until healthy, clean up. */
+/** Child-process helpers for the demo: spawn with logs (default .data/logs), wait until healthy, clean up. */
 import { type ChildProcess, spawn } from "node:child_process";
 import { createWriteStream, mkdirSync } from "node:fs";
 
 const children: ChildProcess[] = [];
+let logDir = ".data/logs";
+
+/** Where service logs go. pnpm dev moves them out of the repo (see scripts/dev.ts). */
+export function setLogDir(dir: string): void {
+  logDir = dir;
+}
 const hooks: Array<() => Promise<void> | void> = [];
 
 /** Runs on Ctrl-C / SIGTERM after the children are killed (e.g. tearing down the local sandbox). */
@@ -11,8 +17,8 @@ export function onStop(fn: () => Promise<void> | void): void {
 }
 
 export function startService(name: string, script: string, env: Record<string, string>): ChildProcess {
-  mkdirSync(".data/logs", { recursive: true });
-  const log = createWriteStream(`.data/logs/${name}.log`, { flags: "w" });
+  mkdirSync(logDir, { recursive: true });
+  const log = createWriteStream(`${logDir}/${name}.log`, { flags: "w" });
   const child = spawn(process.execPath, ["--import", "tsx", script], {
     env: { ...process.env, ...env },
     stdio: ["ignore", "pipe", "pipe"],
@@ -31,8 +37,8 @@ export function startCommand(
   env: Record<string, string>,
   cwd?: string,
 ): ChildProcess {
-  mkdirSync(".data/logs", { recursive: true });
-  const log = createWriteStream(`.data/logs/${name}.log`, { flags: "w" });
+  mkdirSync(logDir, { recursive: true });
+  const log = createWriteStream(`${logDir}/${name}.log`, { flags: "w" });
   const child = spawn(cmd, args, { env: { ...process.env, ...env }, cwd, stdio: ["ignore", "pipe", "pipe"] });
   child.stdout?.pipe(log);
   child.stderr?.pipe(log);

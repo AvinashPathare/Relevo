@@ -37,6 +37,8 @@ export interface RecordedCall {
   method: string;
   args: unknown;
   txHash?: string;
+  /** Logs of every receipt the call produced (NEP-297 events included). */
+  logs?: string[];
 }
 
 const PANIC = /(?:Smart contract panicked|Contract panicked): ?(.*?)(?:$|\n|"|\\n)/;
@@ -142,6 +144,7 @@ export class Chain {
           const txHash = r.transaction?.hash ?? "";
           rec.txHash = txHash;
           const logs = (r.receipts_outcome ?? []).flatMap((o) => o.outcome.logs);
+          rec.logs = logs;
           const failure = (r.receipts_outcome ?? []).find(
             (o) => typeof o.outcome.status === "object" && "Failure" in o.outcome.status,
           );
