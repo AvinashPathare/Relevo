@@ -10,11 +10,15 @@ export default function DraftBatchPage() {
   const { draftId } = useParams<{ draftId: string }>();
   const [cfg, setCfg] = useState<WebConfig | null>(null);
   const [overlay, setOverlay] = useState<RouterBatchStatus | null>(null);
+  // Sticky: once funded, a router blip must not bring the vote card back.
+  const [funded, setFunded] = useState(false);
   useEffect(() => {
     fetchConfig().then(setCfg, () => {});
   }, []);
-  const onOverlay = useCallback((o: RouterBatchStatus | null) => setOverlay(o), []);
-  const funded = !!overlay?.onchain;
+  const onOverlay = useCallback((o: RouterBatchStatus | null) => {
+    if (o) setOverlay(o);
+    if (o?.onchain) setFunded(true);
+  }, []);
   return (
     <>
       <h1>Payout batch</h1>

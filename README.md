@@ -74,7 +74,7 @@ The public key always comes from the chain (`--chain`) or from you (`--pubkey`),
    - On testnet (`pnpm dev:testnet`), you sign with MyNearWallet. Anyone can create the proposal; only a council member can approve it.
 4. **Live status**: each payout's state, route (e.g. MX-3 → MX-2), the penalty paid to the DAO, the proof reference and tx links. When the batch completes it shows the anchored receipt hash, a receipt download and the `verify-receipt` command.
 
-`/chain/<batch id>` shows any funded batch straight from the contract, with no router, and `/firms` shows each firm's bond, on-time record, penalties and volume. Reloading a page shows the same state, because everything comes from the chain.
+`/chain/<batch id>` shows any funded batch straight from the contract, with no router, and `/firms` shows each firm's bond, on-time record, penalties and volume. Payout state always comes from the chain, so a reload shows the same state. If the router goes down, a batch page keeps showing the on-chain state it already knows, and says the router is offline.
 
 While the web app runs, logs go to the temp folder `pnpm dev` prints, not to `.data/logs`, because writes inside the repo would make the dev server reload the page.
 
