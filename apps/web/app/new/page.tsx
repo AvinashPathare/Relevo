@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { PayinPanel } from "../../components/PayinPanel.tsx";
+import { Button, Eyebrow, Steps, Sticker } from "../../components/ui.tsx";
 import {
   type RouterConfig,
   type ValidateResponse,
@@ -39,40 +40,49 @@ export default function NewBatchPage() {
   const sample = async (name: string) => validate(await (await fetch(`/router/samples/${name}`)).text());
 
   return (
-    <>
-      <h1>New payout batch</h1>
-      <p className="muted">
-        CSV columns: <code>name,clabe,amount_mxn</code>, up to 50 rows. Every CLABE is checked before anything
-        goes on-chain.
-      </p>
-      <p>
-        <button type="button" onClick={() => sample("payees.csv")}>
-          Use sample
-        </button>{" "}
-        <button type="button" className="secondary" onClick={() => sample("payees-with-error.csv")}>
-          Use sample with a typo
-        </button>{" "}
-        <label className="tag">
-          Upload CSV{" "}
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              if (f) await validate(await f.text());
-            }}
-          />
-        </label>
-      </p>
-      <textarea value={csv} onChange={(e) => setCsv(e.target.value)} placeholder="or paste CSV here" />
-      <p>
-        <button type="button" disabled={!csv.trim()} onClick={() => validate(csv)}>
-          Validate
-        </button>
-      </p>
+    <div className="sheet stack">
+      <Steps current={result?.ok ? 2 : 1} />
+      <div>
+        <Eyebrow>01 · Upload</Eyebrow>
+        <h1>New payout batch</h1>
+        <p className="lede">
+          CSV columns: <code>name,clabe,amount_mxn</code>, up to 50 rows. Every CLABE is checked before
+          anything goes on-chain.
+        </p>
+      </div>
+      <Sticker>
+        <div className="row" style={{ marginBottom: 14 }}>
+          <Button onClick={() => sample("payees.csv")}>Use sample</Button>
+          <Button variant="secondary" onClick={() => sample("payees-with-error.csv")}>
+            Use sample with a typo
+          </Button>
+          <label className="tag">
+            Upload CSV{" "}
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (f) await validate(await f.text());
+              }}
+            />
+          </label>
+        </div>
+        <textarea value={csv} onChange={(e) => setCsv(e.target.value)} placeholder="or paste CSV here" />
+        <div style={{ marginTop: 12 }}>
+          <Button variant="dark" disabled={!csv.trim()} onClick={() => validate(csv)}>
+            Validate
+          </Button>
+        </div>
+      </Sticker>
       {error && <p className="bad">{error}</p>}
-      {result && <ValidationView result={result} config={config} />}
+      {result && (
+        <div className="stack">
+          {result.ok && <Eyebrow>02 · Quote</Eyebrow>}
+          <ValidationView result={result} config={config} />
+        </div>
+      )}
       {result?.ok && result.total_locked && <PayinPanel totalLockedUnits={result.total_locked} />}
-    </>
+    </div>
   );
 }

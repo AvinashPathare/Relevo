@@ -1,4 +1,5 @@
-import type { StatusModel } from "../lib/status.ts";
+import type { StatusModel, StatusRow } from "../lib/status.ts";
+import { Button, Chip, Eyebrow, Sticker, Ticket } from "./ui.tsx";
 
 export interface StatusViewProps {
   model: StatusModel;
@@ -13,12 +14,28 @@ export interface StatusViewProps {
   explorer?: string | null;
 }
 
-const stateClass: Record<string, string> = {
-  Delivered: "ok",
-  Refunded: "muted",
-  Assigned: "",
-  Funded: "muted",
-};
+function stateTone(r: StatusRow): "mint" | "lavender" | "peach" | "paper" | "rose" {
+  if (r.state === "Delivered") return "mint";
+  if (r.state === "Refunded") return "lavender";
+  if (r.state === "Assigned" && r.route.includes("→")) return "peach";
+  return "paper";
+}
+
+/** "MX-3 → MX-1": every firm before the last missed its cut-off. */
+function Route({ row }: { row: StatusRow }) {
+  if (!row.route) return <span className="muted">-</span>;
+  const firms = row.route.split(" → ");
+  return (
+    <span className="route">
+      {firms.map((f, i) => (
+        <span key={`${f}-${i}`} className="route">
+          {i > 0 && <span aria-hidden="true">→</span>}
+          <Chip tone={i < firms.length - 1 ? "rose" : row.state === "Delivered" ? "mint" : "paper"}>{f}</Chip>
+        </span>
+      ))}
+    </span>
+  );
+}
 
 export function StatusView({
   model,
@@ -30,40 +47,53 @@ export function StatusView({
   explorer,
 }: StatusViewProps) {
   const notes = (
-    <>
+    <div className="row">
       {!routerOnline && <p className="tag">Router offline: showing on-chain data only</p>}
       {model.paused && (
         <p className="tag bad">Contract paused: no new assignments; settlement and refunds still work</p>
       )}
-    </>
+    </div>
   );
   if (!model.found)
     return (
       <>
         {notes}
-        <p>{`No batch ${batchId ?? model.batchId ?? "?"} on ${escrow}`}</p>
+        <Sticker tone="rose">
+          <p>{`No batch ${batchId ?? model.batchId ?? "?"} on ${escrow}`}</p>
+        </Sticker>
       </>
     );
   const tx = (hash: string, url: string | null) =>
     url ? (
-      <a href={url} target="_blank" rel="noreferrer">
+      <a href={url} target="_blank" rel="noreferrer" className="mono">
         {hash.slice(0, 8)}…
       </a>
     ) : (
       <code>{hash.slice(0, 8)}…</code>
     );
+  const status = model.terminal
+    ? model.anchored
+      ? "complete, receipt anchored"
+      : "complete, anchoring receipt…"
+    : "in progress";
   return (
-    <>
+    <div className="stack">
       {notes}
-      <p className="muted">
-        Batch {model.batchId} · funded by {model.funder} ·{" "}
-        {model.terminal
-          ? model.anchored
-            ? "complete, receipt anchored"
-            : "complete, anchoring receipt…"
-          : "in progress"}
-      </p>
-      <div className="scroll">
+      <div className="row">
+        <Chip tone={model.terminal ? "mint" : "peach"}>{status}</Chip>
+        <span className="muted small">
+          Batch {model.batchId} · funded by <span className="mono">{model.funder}</span>
+        </span>
+      </div>
+
+      <div className="tickets">
+        <Ticket tone="paper" label="Locked" value={model.totals.locked} unit="USDC" />
+        <Ticket tone="mint" label="Delivered" value={model.totals.delivered} unit="USDC" />
+        <Ticket tone="lavender" label="Refunded to DAO" value={model.totals.refunded} unit="USDC" />
+        <Ticket tone="peach" label="Penalties to DAO" value={model.totals.penalties} unit="USDC" />
+      </div>
+
+      <Sticker className="scroll">
         <table>
           <thead>
             <tr>
@@ -79,14 +109,24 @@ export function StatusView({
           <tbody>
             {model.rows.map((r) => (
               <tr key={r.id}>
-                <td>{r.id}</td>
-                <td>{r.payee ?? <span className="muted">on-chain only</span>}</td>
+                <td className="mono">{r.id}</td>
+                <td>{r.payee ?? <span className="muted small">on-chain only</span>}</td>
                 <td className="num">{r.amountUsdc}</td>
-                <td className={stateClass[r.state]}>{r.label}</td>
-                <td>{r.route || "-"}</td>
-                <td className="num">{r.penalty}</td>
                 <td>
-                  {r.proofRef && <div>{r.proofRef}</div>}
+                  <Chip tone={stateTone(r)}>{r.label}</Chip>
+                </td>
+                <td>
+                  <Route row={r} />
+                </td>
+                <td className="num">
+                  {r.penalty === "0.00" ? (
+                    <span className="muted">0.00</span>
+                  ) : (
+                    <Chip tone="peach">{r.penalty}</Chip>
+                  )}
+                </td>
+                <td className="small">
+                  {r.proofRef && <div className="mono">{r.proofRef}</div>}
                   {r.txs.map((t) => (
                     <div key={`${t.kind}-${t.hash}`} className="muted">
                       {t.kind} {tx(t.hash, t.url)}
@@ -97,15 +137,13 @@ export function StatusView({
             ))}
           </tbody>
         </table>
-      </div>
-      <div className="card">
-        <div>
-          Locked {model.totals.locked} · delivered {model.totals.delivered} · refunded to DAO{" "}
-          {model.totals.refunded} · penalties paid to DAO {model.totals.penalties} USDC
-        </div>
-        {model.receiptHash && (
-          <div>
-            Receipt hash on-chain: <code>{model.receiptHash}</code>
+      </Sticker>
+
+      <Sticker tone="ink">
+        <Eyebrow>Signed receipt</Eyebrow>
+        {model.receiptHash ? (
+          <p>
+            Receipt hash on-chain: <code style={{ wordBreak: "break-all" }}>{model.receiptHash}</code>
             {explorer && (
               <>
                 {" "}
@@ -114,17 +152,19 @@ export function StatusView({
                 </a>
               </>
             )}
-          </div>
+          </p>
+        ) : (
+          <p>The router signs the receipt and anchors its hash once every payout is delivered or refunded.</p>
         )}
         {receiptUrl && model.anchored && (
           <p>
-            <a href={receiptUrl} download="receipt.json">
+            <Button href={receiptUrl} download="receipt.json" variant="primary">
               Download receipt
-            </a>
+            </Button>
           </p>
         )}
         <pre>{`Verify it yourself: pnpm verify-receipt <file> --chain --rpc ${rpc} --escrow ${escrow}`}</pre>
-      </div>
-    </>
+      </Sticker>
+    </div>
   );
 }
