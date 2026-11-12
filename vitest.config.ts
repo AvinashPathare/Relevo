@@ -12,6 +12,14 @@ export default defineConfig({
       },
       {
         test: {
+          name: "web",
+          environment: "happy-dom",
+          include: ["apps/web/test/**/*.test.{ts,tsx}"],
+          exclude: ["**/*.e2e.test.*", "**/node_modules/**"],
+        },
+      },
+      {
+        test: {
           name: "e2e",
           include: ["packages/*/test/**/*.e2e.test.ts", "apps/*/test/**/*.e2e.test.ts"],
           testTimeout: 300_000,

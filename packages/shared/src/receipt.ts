@@ -8,7 +8,9 @@ import canonicalize from "canonicalize";
 import { b58encode } from "./base58.ts";
 import { type Ed25519Key, publicKeyFromString, sign, verify } from "./keys.ts";
 
-export const LABEL = "Testnet prototype. Payout firms and SPEI receipts are simulated. Contract unaudited.";
+import { LABEL } from "./label.ts";
+
+export { LABEL };
 
 export interface ReceiptPayout {
   id: number;

@@ -39,6 +39,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+      - run: pnpm build:web
       - run: pnpm test
       - name: Fetch Sputnik DAO wasm (hash-checked)
         run: node scripts/fetch-sputnik.mjs

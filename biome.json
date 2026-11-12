@@ -11,7 +11,9 @@
       "!.superpowers",
       "!**/*.json",
       "!docs",
-      "!**/*.md"
+      "!**/*.md",
+      "!apps/web/.next",
+      "!**/next-env.d.ts"
     ]
   },
   "formatter": {
