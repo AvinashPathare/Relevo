@@ -1,4 +1,5 @@
 /** Router HTTP API (spec §8) plus the internal endpoints the oracle and firm simulators use. */
+import { readFileSync } from "node:fs";
 import { LABEL } from "@elivo/shared/receipt";
 import type { BatchView, PayoutView } from "@elivo/shared/views";
 import Fastify, { type FastifyInstance } from "fastify";
@@ -20,6 +21,14 @@ export function createRouterServer(engine: Engine, opts: ServerOptions = {}): Fa
   app.setReplySerializer((payload) => JSON.stringify(payload, bigintSafe));
 
   app.get("/", async () => ({ service: "router", label: LABEL }));
+
+  // The two sample CSVs, for the web app's "Use sample" buttons.
+  const SAMPLES = new Set(["payees.csv", "payees-with-error.csv"]);
+  app.get<{ Params: { name: string } }>("/samples/:name", async (req, reply) => {
+    if (!SAMPLES.has(req.params.name)) return reply.code(404).send({ error: "unknown_sample" });
+    const text = readFileSync(new URL(`../../../samples/${req.params.name}`, import.meta.url), "utf8");
+    return reply.type("text/csv; charset=utf-8").send(text);
+  });
 
   app.get("/config", async () => ({
     network: engine.network,

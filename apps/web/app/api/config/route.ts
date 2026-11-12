@@ -1,12 +1,18 @@
-import { loadDeployment } from "@elivo/shared/config";
+import type { Deployment } from "@elivo/shared/config";
 import type { WebConfig } from "../../../lib/config.ts";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * The deployment arrives as JSON in ELIVO_DEPLOYMENT_JSON (set by scripts/dev.ts). The web app reads no
+ * files: in dev, Turbopack treats a dynamic filesystem read as a dependency on the whole repo, and the
+ * services' log writes then trigger an endless reload loop.
+ */
 export function GET(): Response {
-  const file = process.env.DEPLOYMENT;
-  if (!file) return Response.json({ error: "DEPLOYMENT not set (start with pnpm dev)" }, { status: 503 });
-  const d = loadDeployment(file);
+  const raw = process.env.ELIVO_DEPLOYMENT_JSON;
+  if (!raw)
+    return Response.json({ error: "deployment not configured (start with pnpm dev)" }, { status: 503 });
+  const d = JSON.parse(raw) as Deployment;
   const cfg: WebConfig = {
     network: d.network,
     escrow: d.escrow,

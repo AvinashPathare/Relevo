@@ -101,4 +101,15 @@ describe("router server", () => {
       council: ["c.test"],
     });
   });
+
+  it("GET /samples/:name serves the two sample CSVs and nothing else", async () => {
+    const { app } = setup();
+    const ok = await app.inject({ method: "GET", url: "/samples/payees.csv" });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.headers["content-type"]).toMatch(/text\/csv/);
+    expect(ok.body).toBe(csv);
+    expect((await app.inject({ method: "GET", url: "/samples/payees-with-error.csv" })).statusCode).toBe(200);
+    expect((await app.inject({ method: "GET", url: "/samples/..%2Fpackage.json" })).statusCode).toBe(404);
+    expect((await app.inject({ method: "GET", url: "/samples/other.csv" })).statusCode).toBe(404);
+  });
 });

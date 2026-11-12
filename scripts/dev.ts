@@ -5,6 +5,7 @@
  *
  * Testnet prototype. Payout firms and SPEI receipts are simulated. Contract unaudited.
  */
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { env, loadDeployment } from "@elivo/shared/config";
 import { LABEL } from "@elivo/shared/receipt";
@@ -37,7 +38,7 @@ async function main() {
     const d = loadDeployment(depFile);
     await startWeb({
       ELIVO_NETWORK: "testnet",
-      DEPLOYMENT: depFile,
+      ELIVO_DEPLOYMENT_JSON: JSON.stringify(d),
       NEAR_RPC_URL: process.env.NEAR_RPC_URL ?? d.rpcUrl,
     });
     console.log(
@@ -50,7 +51,7 @@ async function main() {
     const { urls, depFile } = await startServices(s, network, e, { routerStore });
     const webEnv: Record<string, string> = {
       ELIVO_NETWORK: network,
-      DEPLOYMENT: resolve(depFile),
+      ELIVO_DEPLOYMENT_JSON: readFileSync(depFile, "utf8"),
       NEAR_RPC_URL: s.chain.opts.rpcUrl,
       ROUTER_URL: urls.router,
     };
