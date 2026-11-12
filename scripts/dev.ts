@@ -21,8 +21,8 @@ const readOnly = process.argv.includes("--read-only");
 const WEB_PORT = Number(process.env.WEB_PORT ?? 3000);
 const SIGNER_PORT = Number(process.env.DEMO_SIGNER_PORT ?? 7430);
 const e = env({ ...process.env, ELIVO_NETWORK: network });
-// Logs and the router store live outside the repo while the web app runs: Turbopack watches the
-// whole workspace, and with a browser connected, writes under .data/ trigger page reloads.
+// Logs and the router store live outside the repo while the web app runs, so the dev server's file
+// watcher never sees the services' writes (see scripts/lib/web-args.ts for the reload loop this avoids).
 const devDir = process.env.ELIVO_DEV_DIR ?? join(tmpdir(), "elivo-dev");
 setLogDir(join(devDir, "logs"));
 
