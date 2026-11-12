@@ -13,6 +13,7 @@ import { LABEL } from "@elivo/shared/receipt";
 import { createDemoSigner, DEMO_SIGNER_LABEL } from "./lib/demo-signer.ts";
 import { onStop, setLogDir, startCommand, stopAll, waitHealthy } from "./lib/procs.ts";
 import { setupSandbox, setupTestnet, startServices } from "./lib/stack.ts";
+import { nextDevArgs } from "./lib/web-args.ts";
 
 const arg = (k: string) => (process.argv.includes(k) ? process.argv[process.argv.indexOf(k) + 1] : undefined);
 const network = arg("--network") ?? "sandbox";
@@ -26,13 +27,7 @@ const devDir = process.env.ELIVO_DEV_DIR ?? join(tmpdir(), "elivo-dev");
 setLogDir(join(devDir, "logs"));
 
 function startWeb(webEnv: Record<string, string>) {
-  startCommand(
-    "web",
-    "pnpm",
-    ["exec", "next", "dev", "--port", String(WEB_PORT)],
-    webEnv,
-    resolve("apps/web"),
-  );
+  startCommand("web", "pnpm", nextDevArgs(WEB_PORT), webEnv, resolve("apps/web"));
   return waitHealthy(`http://127.0.0.1:${WEB_PORT}/api/config`, 120_000);
 }
 
