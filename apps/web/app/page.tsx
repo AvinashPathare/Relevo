@@ -1,11 +1,11 @@
 export default function Home() {
   return (
     <>
-      <h1>Pay a DAO's contributors in Mexico, with a delivery guarantee you can check</h1>
+      <h1>A testnet prototype for paying a DAO's contributors in Mexico</h1>
       <p>
-        The DAO votes once and the USDC locks in a NEAR escrow. Bonded payout firms deliver; a firm that
-        misses its cut-off is rerouted and its bond pays a penalty to the DAO. Every batch ends in a signed
-        receipt whose hash is anchored on-chain.
+        The DAO votes once and the USDC locks in a NEAR escrow. Simulated payout firms with real testnet bonds
+        deliver; a firm that misses its cut-off is rerouted and its bond pays a penalty to the DAO. Every
+        batch ends in a signed receipt whose hash is anchored on-chain, so anyone can check what happened.
       </p>
       <ul>
         <li>
