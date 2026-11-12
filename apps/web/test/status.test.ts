@@ -84,7 +84,17 @@ describe("buildStatus model", () => {
     const dup = {
       ...overlay,
       payouts: overlay.payouts.map((p) =>
-        p.id === 2 ? { ...p, txs: { refund: [{ hash: "r1", url: null }, { hash: "r1", url: null }] } } : p,
+        p.id === 2
+          ? {
+              ...p,
+              txs: {
+                refund: [
+                  { hash: "r1", url: null },
+                  { hash: "r1", url: null },
+                ],
+              },
+            }
+          : p,
       ),
     };
     expect(buildStatus(views(), dup, FIRMS).rows[2].txs).toEqual([{ kind: "refund", hash: "r1", url: null }]);
