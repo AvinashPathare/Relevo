@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { PayinPanel } from "../../components/PayinPanel.tsx";
-import { Button, Eyebrow, Steps, Sticker } from "../../components/ui.tsx";
+import { Button, Eyebrow, Steps, Window } from "../../components/ui.tsx";
 import {
   type RouterConfig,
   type ValidateResponse,
@@ -40,17 +40,17 @@ export default function NewBatchPage() {
   const sample = async (name: string) => validate(await (await fetch(`/router/samples/${name}`)).text());
 
   return (
-    <div className="sheet stack">
+    <div className="stack">
       <Steps current={result?.ok ? 2 : 1} />
       <div>
         <Eyebrow>01 · Upload</Eyebrow>
-        <h1>New payout batch</h1>
+        <h1 className="page-title">New payout batch</h1>
         <p className="lede">
           CSV columns: <code>name,clabe,amount_mxn</code>, up to 50 rows. Every CLABE is checked before
           anything goes on-chain.
         </p>
       </div>
-      <Sticker>
+      <Window title="~/new" status={result ? (result.ok ? "done" : "offline") : "idle"}>
         <div className="row" style={{ marginBottom: 14 }}>
           <Button onClick={() => sample("payees.csv")}>Use sample</Button>
           <Button variant="secondary" onClick={() => sample("payees-with-error.csv")}>
@@ -74,7 +74,7 @@ export default function NewBatchPage() {
             Validate
           </Button>
         </div>
-      </Sticker>
+      </Window>
       {error && <p className="bad">{error}</p>}
       {result && (
         <div className="stack">

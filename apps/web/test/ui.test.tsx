@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { Button, Chip, Eyebrow, Steps, Sticker, Ticket } from "../components/ui.tsx";
+import { Button, Chip, Eyebrow, Progress, Steps, Sticker, Ticket, Window } from "../components/ui.tsx";
 
 afterEach(cleanup);
 
@@ -56,5 +56,26 @@ describe("ui primitives", () => {
     expect(items[0].dataset.state).toBe("done");
     expect(items[1].getAttribute("aria-current")).toBe("step");
     expect(items[2].dataset.state).toBe("todo");
+  });
+
+  it("Window shows a path title with a status dot", () => {
+    render(
+      <Window title="~/batches/abc123" status="live">
+        body
+      </Window>,
+    );
+    expect(screen.getByText("~/batches/abc123")).toBeTruthy();
+    const win = screen.getByRole("region", { name: "~/batches/abc123" });
+    expect(win.dataset.status).toBe("live");
+    expect(screen.getByText("body")).toBeTruthy();
+  });
+
+  it("Progress reports its value", () => {
+    render(<Progress value={3} max={5} label="3 of 5 payouts final" />);
+    const bar = screen.getByRole("progressbar");
+    expect(bar.getAttribute("aria-valuenow")).toBe("3");
+    expect(bar.getAttribute("aria-valuemax")).toBe("5");
+    expect(screen.getByText("3 of 5 payouts final")).toBeTruthy();
+    expect((bar.querySelector(".progress-fill") as HTMLElement).style.width).toBe("60%");
   });
 });

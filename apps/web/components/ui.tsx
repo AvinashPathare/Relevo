@@ -110,3 +110,49 @@ export function Steps({ current }: { current: 1 | 2 | 3 | 4 }) {
     </ol>
   );
 }
+
+/** Terminal-style window: a black folder tab with a status dot and a path title, then the body. */
+export function Window({
+  title,
+  status = "idle",
+  children,
+  actions,
+  className = "",
+}: {
+  title: string;
+  status?: "live" | "done" | "offline" | "idle";
+  children: ReactNode;
+  /** Right-aligned controls in the title bar. */
+  actions?: ReactNode;
+  className?: string;
+}) {
+  const id = `win-${title.replace(/[^a-z0-9]+/gi, "-")}`;
+  return (
+    <section className={`window ${className}`.trim()} data-status={status} aria-labelledby={id}>
+      <div className="window-tab">
+        <span className="window-dot" aria-hidden="true" />
+        <span id={id}>{title}</span>
+      </div>
+      <div className="window-bar">{actions}</div>
+      <div className="window-body">{children}</div>
+    </section>
+  );
+}
+
+/** Mustard progress bar with the label printed inside. */
+export function Progress({ value, max, label }: { value: number; max: number; label: string }) {
+  const pct = max > 0 ? Math.round((Math.min(value, max) / max) * 100) : 0;
+  return (
+    <div
+      className="progress"
+      role="progressbar"
+      aria-valuenow={value}
+      aria-valuemin={0}
+      aria-valuemax={max}
+      aria-label={label}
+    >
+      <div className="progress-fill" style={{ width: `${pct}%` }} />
+      <span className="progress-label">{label}</span>
+    </div>
+  );
+}

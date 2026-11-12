@@ -1,5 +1,5 @@
 import type { StatusModel, StatusRow } from "../lib/status.ts";
-import { Button, Chip, Eyebrow, Sticker, Ticket } from "./ui.tsx";
+import { Button, Chip, Eyebrow, Progress, Sticker, Ticket, Window } from "./ui.tsx";
 
 export interface StatusViewProps {
   model: StatusModel;
@@ -71,6 +71,7 @@ export function StatusView({
     ) : (
       <code>{hash.slice(0, 8)}…</code>
     );
+  const finalCount = model.rows.filter((r) => r.state === "Delivered" || r.state === "Refunded").length;
   const status = model.terminal
     ? model.anchored
       ? "complete, receipt anchored"
@@ -93,51 +94,61 @@ export function StatusView({
         <Ticket tone="peach" label="Penalties to DAO" value={model.totals.penalties} unit="USDC" />
       </div>
 
-      <Sticker className="scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Payee</th>
-              <th className="num">USDC</th>
-              <th>Status</th>
-              <th>Route</th>
-              <th className="num">Penalty to DAO</th>
-              <th>Proof / txs</th>
-            </tr>
-          </thead>
-          <tbody>
-            {model.rows.map((r) => (
-              <tr key={r.id}>
-                <td className="mono">{r.id}</td>
-                <td>{r.payee ?? <span className="muted small">on-chain only</span>}</td>
-                <td className="num">{r.amountUsdc}</td>
-                <td>
-                  <Chip tone={stateTone(r)}>{r.label}</Chip>
-                </td>
-                <td>
-                  <Route row={r} />
-                </td>
-                <td className="num">
-                  {r.penalty === "0.00" ? (
-                    <span className="muted">0.00</span>
-                  ) : (
-                    <Chip tone="peach">{r.penalty}</Chip>
-                  )}
-                </td>
-                <td className="small">
-                  {r.proofRef && <div className="mono">{r.proofRef}</div>}
-                  {r.txs.map((t) => (
-                    <div key={`${t.kind}-${t.hash}`} className="muted">
-                      {t.kind} {tx(t.hash, t.url)}
-                    </div>
-                  ))}
-                </td>
+      <Window
+        title={`~/batches/${model.batchId}`}
+        status={!routerOnline ? "offline" : model.terminal && model.anchored ? "done" : "live"}
+      >
+        <Progress
+          value={finalCount}
+          max={model.rows.length}
+          label={`${finalCount} of ${model.rows.length} payouts final`}
+        />
+        <div className="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Payee</th>
+                <th className="num">USDC</th>
+                <th>Status</th>
+                <th>Route</th>
+                <th className="num">Penalty to DAO</th>
+                <th>Proof / txs</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </Sticker>
+            </thead>
+            <tbody>
+              {model.rows.map((r) => (
+                <tr key={r.id}>
+                  <td className="mono">{r.id}</td>
+                  <td>{r.payee ?? <span className="muted small">on-chain only</span>}</td>
+                  <td className={`num${r.state === "Delivered" ? " pos" : ""}`}>{r.amountUsdc}</td>
+                  <td>
+                    <Chip tone={stateTone(r)}>{r.label}</Chip>
+                  </td>
+                  <td>
+                    <Route row={r} />
+                  </td>
+                  <td className="num">
+                    {r.penalty === "0.00" ? (
+                      <span className="muted">0.00</span>
+                    ) : (
+                      <Chip tone="peach">{r.penalty}</Chip>
+                    )}
+                  </td>
+                  <td className="small">
+                    {r.proofRef && <div className="mono">{r.proofRef}</div>}
+                    {r.txs.map((t) => (
+                      <div key={`${t.kind}-${t.hash}`} className="muted">
+                        {t.kind} {tx(t.hash, t.url)}
+                      </div>
+                    ))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Window>
 
       <Sticker tone="ink">
         <Eyebrow>Signed receipt</Eyebrow>

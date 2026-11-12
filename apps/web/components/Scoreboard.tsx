@@ -1,6 +1,6 @@
 import { formatUsdc } from "@elivo/shared/money";
 import type { FirmScore } from "@elivo/shared/scoreboard";
-import { Chip, Sticker } from "./ui.tsx";
+import { Chip, Progress, Sticker, Window } from "./ui.tsx";
 
 export interface ScoreRow {
   name: string;
@@ -18,7 +18,7 @@ function line(r: ScoreRow): string {
 
 export function Scoreboard({ rows }: { rows: ScoreRow[] }) {
   return (
-    <div className="stack">
+    <Window title="~/firms" status="live">
       <ul className="grid-2" style={{ listStyle: "none", padding: 0, margin: 0 }}>
         {rows.map((r) => {
           const s = r.score;
@@ -39,14 +39,21 @@ export function Scoreboard({ rows }: { rows: ScoreRow[] }) {
                 {line(r)}
               </div>
               <div className="muted small">{`Bond ${formatUsdc(BigInt(r.bond))} USDC · max open exposure ${formatUsdc(exposureMax)} USDC${r.approved ? "" : " · not approved"}`}</div>
+              <div style={{ marginTop: 10 }}>
+                <Progress
+                  value={s.onTime}
+                  max={Math.max(1, s.onTime + s.late)}
+                  label={`${s.onTime + s.late} deliveries`}
+                />
+              </div>
             </Sticker>
           );
         })}
       </ul>
-      <p className="muted small">
+      <p className="muted small" style={{ marginTop: 14 }}>
         On-chain counters in the escrow, updated by the same transitions that emit the events. Recomputed from
         events in the test suite.
       </p>
-    </div>
+    </Window>
   );
 }

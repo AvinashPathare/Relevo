@@ -43,8 +43,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <Banner />
         <div className="nav-wrap">
+          <Banner />
           <nav className="nav">
             <a className="brand" href="/">
               <Glyph />
@@ -54,7 +54,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <a href="/new">New batch</a>
               <a href="/firms">Firms</a>
             </div>
-            {net && <span className="pill-label">{net}</span>}
+            {net && <span className="net">{net}</span>}
           </nav>
         </div>
         <main className="shell">{children}</main>

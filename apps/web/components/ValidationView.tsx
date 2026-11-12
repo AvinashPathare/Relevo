@@ -1,5 +1,5 @@
 import { formatUsdc } from "@elivo/shared/money";
-import { Button, Chip, Eyebrow, Sticker, Ticket } from "./ui.tsx";
+import { Button, Chip, Eyebrow, Sticker, Ticket, Window } from "./ui.tsx";
 
 export interface ValidateResponse {
   ok: boolean;
@@ -42,30 +42,32 @@ export function ValidationView({
   const locked = BigInt(result.total_locked ?? "0");
   return (
     <div className="stack">
-      <Sticker className="scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Row</th>
-              <th>Payee</th>
-              <th>Account</th>
-              <th className="num">MXN</th>
-              <th className="num">USDC</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.rows.map((r) => (
-              <tr key={r.row}>
-                <td className="mono">{r.row}</td>
-                <td>{r.name}</td>
-                <td className="mono">{`****${r.clabe_last4}`}</td>
-                <td className="num">{r.amount_mxn}</td>
-                <td className="num">{formatUsdc(BigInt(r.amount_usdc))}</td>
+      <Window title={`~/new/payees.csv · ${result.rows.length} rows`} status="done">
+        <div className="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Row</th>
+                <th>Payee</th>
+                <th>Account</th>
+                <th className="num">MXN</th>
+                <th className="num">USDC</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </Sticker>
+            </thead>
+            <tbody>
+              {result.rows.map((r) => (
+                <tr key={r.row}>
+                  <td className="mono">{r.row}</td>
+                  <td>{r.name}</td>
+                  <td className="mono">{`****${r.clabe_last4}`}</td>
+                  <td className="num">{r.amount_mxn}</td>
+                  <td className="num">{formatUsdc(BigInt(r.amount_usdc))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Window>
       <div className="tickets">
         <Ticket tone="paper" label="Payouts" value={formatUsdc(payouts)} unit="USDC" />
         <Ticket

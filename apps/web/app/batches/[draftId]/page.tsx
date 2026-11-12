@@ -21,11 +21,11 @@ export default function DraftBatchPage() {
     if (o?.onchain) setFunded(true);
   }, []);
   return (
-    <div className="sheet stack">
+    <div className="stack">
       <Steps current={funded ? 4 : 3} />
       <div>
         <Eyebrow>{funded ? "04 · Status" : "03 · Vote"}</Eyebrow>
-        <h1>Payout batch</h1>
+        <h1 className="page-title">Payout batch</h1>
         {overlay && !funded && (
           <p className="muted">
             {`${overlay.draft.rows.length} payees validated. Batch hash ${overlay.draft.batch_hash.slice(0, 16)}… (salted; names and accounts stay off-chain).`}

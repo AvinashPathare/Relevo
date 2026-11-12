@@ -29,10 +29,10 @@ export default function FirmsPage() {
     })().catch((e) => setError((e as Error).message));
   }, []);
   return (
-    <div className="sheet stack">
+    <div className="stack">
       <div>
         <Eyebrow>Payout firms · on-chain record</Eyebrow>
-        <h1>Payout firms</h1>
+        <h1 className="page-title">Payout firms</h1>
         <p className="lede">
           Simulated firms with real testnet bonds. A late firm is rerouted and pays 1 bp per period late to
           the DAO, capped at 2%.
