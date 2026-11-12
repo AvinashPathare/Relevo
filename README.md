@@ -1,6 +1,6 @@
 # Elivo Payout Guard
 
-[![CI](https://github.com/OWNER/elivo-payout-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/elivo-payout-guard/actions/workflows/ci.yml)
+[![CI](https://github.com/AvinashPathare/Relevo/actions/workflows/ci.yml/badge.svg)](https://github.com/AvinashPathare/Relevo/actions/workflows/ci.yml)
 
 > **Testnet prototype. Payout firms and SPEI receipts are simulated. Contract unaudited.**
 > Not a money transmitter and not a live service.
@@ -16,6 +16,8 @@ A DAO votes once to pay a batch of contributors in Mexico. The USDC locks in a N
 | Router: quotes, assignment, reroute, settle, refund, receipt anchoring (`apps/router`) | Real service. It signs only with a function-call key limited to six escrow methods. |
 | Signed receipts and `verify-receipt` | Real ed25519 signatures over RFC 8785 canonical JSON. The hash is anchored on-chain. |
 | CSV import with CLABE check-digit validation | Real |
+| Web app (`apps/web`, Next.js) | Real. Payout state comes from the escrow's view methods; the router only adds payee names (last 4 digits of the account) and tx links. |
+| Pay-in quote from ETH, BTC, SOL or Base USDC | **Real mainnet quote** from the NEAR Intents 1Click API (dry quote), shown for illustration. Nothing is sent. |
 | Payout firms MX-1, MX-2, MX-3 (`apps/firm-sim`) | **Simulated.** No MXN moves. MX-3 is configured to be late. |
 | Proof oracle and SPEI/CEP references (`apps/oracle`) | **Simulated.** Signs a proof in the shape of a CEP reference. |
 | USDC | **Mock** NEP-141 token (`contracts/mock-usdc`, "mUSDC", 6 decimals) |
@@ -30,7 +32,10 @@ Requirements: Node 22+ and pnpm 10, on macOS or a Linux with glibc 2.38 or newer
 make setup   # pnpm install; fetch the Sputnik DAO wasm (hash-checked); generate local keys in .data/
 make demo    # full batch on a local NEAR sandbox, about 1 minute; no accounts or keys needed
 make test    # contracts (unit, property, sandbox) + TypeScript (lint, typecheck, unit)
+pnpm dev     # the web app on a local sandbox: http://localhost:3000/new
 ```
+
+To look at the testnet reference run without any keys: `pnpm web:testnet`, then open http://localhost:3000/chain/5 and http://localhost:3000/firms.
 
 ## Run the demo
 
@@ -57,6 +62,21 @@ pnpm verify-receipt .data/receipts/<file>.json --pubkey ed25519:<receipt-key>
 The public key always comes from the chain (`--chain`) or from you (`--pubkey`), never from the file itself.
 
 **On testnet:** `make demo-testnet` runs the same flow against the deployment below. It needs the deployer's keys in `~/.near-credentials`, so it can only be run by whoever created the deployment. To create your own deployment, run `make deploy-testnet` and then `./scripts/testnet-dao.sh`; both use faucet-funded accounts.
+
+## Web app
+
+`pnpm dev` starts a local sandbox, the router, the oracle and the three firm simulators, then the web app at http://localhost:3000. The screens are:
+
+1. **New batch** (`/new`): upload or paste a CSV, or use a sample. Every CLABE is checked; one bad row blocks the batch.
+2. **Quote**: payees with the last 4 digits only, payouts, the 25 bps fee buffer, the total to lock, the fixed rate and the deadlines. Below that is a live 1Click pay-in quote (ETH, BTC, SOL or Base USDC). It is a mainnet price for illustration; 1Click's own app fee is shown.
+3. **Propose & vote** (`/batches/<id>`): create the Sputnik DAO proposal, then approve it as the council.
+   - On the sandbox, a **demo signer** labelled "Demo signer: local sandbox keys, not a wallet" signs with the local council key. It only signs this app's funding proposal.
+   - On testnet (`pnpm dev:testnet`), you sign with MyNearWallet. Anyone can create the proposal; only a council member can approve it.
+4. **Live status**: each payout's state, route (e.g. MX-3 → MX-2), the penalty paid to the DAO, the proof reference and tx links. When the batch completes it shows the anchored receipt hash, a receipt download and the `verify-receipt` command.
+
+`/chain/<batch id>` shows any funded batch straight from the contract, with no router, and `/firms` shows each firm's bond, on-time record, penalties and volume. Reloading a page shows the same state, because everything comes from the chain.
+
+While the web app runs, logs go to the temp folder `pnpm dev` prints, not to `.data/logs`, because writes inside the repo would make the dev server reload the page.
 
 ## Run the tests
 
@@ -98,11 +118,22 @@ What the tests pin down:
   - a reroute away from MX-3 with a penalty, within 10 s of the cut-off;
   - `verify-receipt --chain` OK;
   - the DAO's final balance;
-  - no payee name or CLABE in any chain call.
+  - no payee name or CLABE in any chain call;
+  - after a router restart, the web app's status model equals the contract's views (F13);
+  - the firm scoreboard recomputed from the contract's events equals its on-chain counters (F16).
+- **Web app (vitest + happy-dom):**
+  - status labels and totals;
+  - no full CLABE rendered;
+  - router offline and contract paused;
+  - the validation errors block the batch;
+  - only council members can approve;
+  - 1Click failures (timeout, HTTP error, bad response, unknown asset) show a message instead of breaking the page.
 
 ## Architecture
 
 ```
+ web app (Next.js): CSV upload, quote, propose & vote, status ── reads contract views via RPC
+   │
  CSV ──► router ── builds proposal args ──► council signs add_proposal + act_proposal ──► Sputnik DAO
  (names, CLABEs                                                                              │
   stay local)                                                    ft_transfer_call on approval │
@@ -122,7 +153,7 @@ What the tests pin down:
 Repo layout:
 - `contracts/`: Rust contracts and their tests, with committed wasm in `contracts/res/`
 - `packages/shared/`: CLABE, CSV, money, borsh messages, keys, receipts, chain client, local sandbox stack
-- `apps/`: router, oracle and firm simulators
+- `apps/`: web app, router, oracle and firm simulators
 - `scripts/`: demo, deployment and keys
 - `docs/superpowers/`: design spec and implementation plans
 
@@ -159,9 +190,8 @@ What is new: intent networks already guarantee crypto delivery. This applies the
 - Real payout-firm adapters in place of the simulators, and a bank-side proof source in place of the simulated oracle.
 - A custodian-held second release key.
 - Sealed commit-reveal quotes; the full set of exclusion reason codes (bank outage, rejection, wrong details).
-- A public on-time scoreboard per firm.
-- A pay-in quote from any chain through the NEAR Intents 1Click API (planned, not built in this repo yet).
-- A web app with wallet-signed proposals.
+- Pay-in through 1Click for real (today the app shows a dry quote only).
+- More wallets in the web app (MyNearWallet only today).
 - An audit before any real funds.
 
 ## Disclosures

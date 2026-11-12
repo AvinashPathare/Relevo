@@ -15,4 +15,4 @@ RUN if [ "$(uname -m)" = "x86_64" ]; then \
 WORKDIR /repo
 COPY . .
 RUN make setup
-CMD ["bash", "-c", "set -e; make demo; pnpm test:e2e; if command -v cargo-near >/dev/null; then make test; else make test-ts && cargo test --workspace; fi; echo FRESH-CLONE-CHECK-PASSED"]
+CMD ["bash", "-c", "set -e; pnpm build:web; make demo; pnpm test:e2e; if command -v cargo-near >/dev/null; then make test; else make test-ts && cargo test --workspace; fi; echo FRESH-CLONE-CHECK-PASSED"]

@@ -1,13 +1,18 @@
 /** Router HTTP API (spec §8) plus the internal endpoints the oracle and firm simulators use. */
+import { readFileSync } from "node:fs";
 import { LABEL } from "@elivo/shared/receipt";
 import type { BatchView, PayoutView } from "@elivo/shared/views";
 import Fastify, { type FastifyInstance } from "fastify";
+import { councilOf, findProposalForDraft } from "./dao.ts";
 import type { Engine } from "./engine.ts";
+import { createPayinQuoter, PAYIN_ASSETS, type PayinQuoter } from "./payin.ts";
 import { validateCsv } from "./validate.ts";
 
 export interface ServerOptions {
   rate?: string;
   firmUrls?: Record<string, string>;
+  /** 1Click pay-in quoter (injectable for tests). */
+  payin?: PayinQuoter;
 }
 
 const bigintSafe = (_k: string, v: unknown) => (typeof v === "bigint" ? v.toString() : v);
@@ -19,6 +24,46 @@ export function createRouterServer(engine: Engine, opts: ServerOptions = {}): Fa
   app.setReplySerializer((payload) => JSON.stringify(payload, bigintSafe));
 
   app.get("/", async () => ({ service: "router", label: LABEL }));
+
+  // The two sample CSVs, for the web app's "Use sample" buttons.
+  const SAMPLES = new Set(["payees.csv", "payees-with-error.csv"]);
+  app.get<{ Params: { name: string } }>("/samples/:name", async (req, reply) => {
+    if (!SAMPLES.has(req.params.name)) return reply.code(404).send({ error: "unknown_sample" });
+    const text = readFileSync(new URL(`../../../samples/${req.params.name}`, import.meta.url), "utf8");
+    return reply.type("text/csv; charset=utf-8").send(text);
+  });
+
+  const payin = opts.payin ?? createPayinQuoter();
+  app.get("/quote/assets", async () =>
+    Object.entries(PAYIN_ASSETS).map(([id, a]) => ({ id, symbol: a.symbol, chain: a.chain })),
+  );
+  app.get<{ Querystring: { asset?: string; amount?: string } }>("/quote/payin", async (req, reply) => {
+    const { asset = "", amount = "" } = req.query;
+    if (!/^[1-9]\d{0,30}$/.test(amount)) return reply.code(400).send({ ok: false, reason: "bad_amount" });
+    return payin.quote(asset, amount);
+  });
+
+  app.get("/config", async () => ({
+    network: engine.network,
+    escrow: engine.escrowId,
+    rate,
+    cutoff_in_s: engine.proposalSettings?.cutoffInS ?? null,
+    deadline_in_s: engine.proposalSettings?.deadlineInS ?? null,
+    grace_ms: Number(engine.graceNs / 1_000_000n),
+    fee_buffer_bps: 25,
+  }));
+
+  app.get<{ Params: { id: string } }>("/batches/:id/dao-proposal", async (req, reply) => {
+    const draft = engine.store.get(req.params.id);
+    if (!draft) return reply.code(404).send({ error: "unknown_draft" });
+    const daoId = engine.proposalSettings?.daoId;
+    if (!daoId) return reply.code(404).send({ error: "no_dao_configured" });
+    const view = engine.chain.view.bind(engine.chain);
+    const p = await findProposalForDraft(view, daoId, draft.id);
+    if (!p) return reply.code(404).send({ error: "no_proposal" });
+    const policy = await view<{ roles?: Array<{ kind: unknown }> }>(daoId, "get_policy");
+    return { ...p, council: councilOf(policy) };
+  });
 
   app.post("/batches/validate", async (req, reply) => {
     const body = req.body as string | { csv?: string };

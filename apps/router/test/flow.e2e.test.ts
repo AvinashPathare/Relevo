@@ -8,8 +8,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createFirm } from "@elivo/firm-sim/firm";
 import { createOracle, type Order } from "@elivo/oracle/oracle";
+import { clabeLast4 } from "@elivo/shared/clabe";
+import { parseElivoEvents } from "@elivo/shared/events";
+import { formatUsdc } from "@elivo/shared/money";
+import { scoreboardFromEvents, scoreboardFromFirms } from "@elivo/shared/scoreboard";
 import { type LocalStack, startLocalStack } from "@elivo/shared/testing/localstack";
-import type { PayoutView } from "@elivo/shared/views";
+import type { FirmView, PayoutView } from "@elivo/shared/views";
+import { buildStatus, loadChainViews, type RouterBatchStatus } from "@elivo/web/lib/status";
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Engine, httpFirmClient } from "../src/engine.ts";
@@ -27,6 +32,8 @@ let engine: Engine;
 const apps: FastifyInstance[] = [];
 let ticker: NodeJS.Timeout | undefined;
 let routerUrl = "";
+let mkEngine: (store: Store) => Engine;
+const storeFile = join(mkdtempSync(join(tmpdir(), "elivo-e2e-")), "router.json");
 
 async function listen(app: FastifyInstance): Promise<string> {
   apps.push(app);
@@ -51,19 +58,21 @@ beforeAll(async () => {
   stack = await startLocalStack();
   console.error("[e2e] stack up");
   const { chain, deployment: d, keys } = stack;
-  engine = new Engine({
-    chain,
-    router: chain.signer(d.router, keys.routerFc),
-    escrowId: d.escrow,
-    store: new Store(null),
-    firms: [],
-    firmClient: httpFirmClient,
-    graceNs: 5n * S,
-    receiptKey: keys.receipt,
-    network: "sandbox",
-    log: (msg, data) => console.error(`[engine] ${msg} ${JSON.stringify(data ?? {})}`),
-    proposal: { daoId: d.dao, usdcId: d.usdc, cutoffInS: 40, deadlineInS: 300 },
-  });
+  mkEngine = (store: Store) =>
+    new Engine({
+      chain,
+      router: chain.signer(d.router, keys.routerFc),
+      escrowId: d.escrow,
+      store,
+      firms: [],
+      firmClient: httpFirmClient,
+      graceNs: 5n * S,
+      receiptKey: keys.receipt,
+      network: "sandbox",
+      log: (msg, data) => console.error(`[engine] ${msg} ${JSON.stringify(data ?? {})}`),
+      proposal: { daoId: d.dao, usdcId: d.usdc, cutoffInS: 40, deadlineInS: 300 },
+    });
+  engine = mkEngine(new Store(storeFile));
   routerUrl = await listen(createRouterServer(engine));
   const oracleUrl = await listen(
     createOracle({
@@ -231,6 +240,61 @@ describe("full payout flow on the sandbox", () => {
       const [name, clabe] = line.split(",");
       expect(all).not.toContain(name);
       expect(all).not.toContain(clabe);
+    }
+  });
+
+  it("(h) F13: after a router reload, the status model equals the contract views", async () => {
+    const { deployment: d } = stack;
+    const reloaded = await listen(createRouterServer(mkEngine(new Store(storeFile))));
+    const draftId = engine.draftIdFor(batchId);
+    const overlay = (await (await fetch(`${reloaded}/batches/${draftId}`)).json()) as RouterBatchStatus;
+    const views = await loadChainViews(d.escrow, batchId, { rpcUrl: stack.chain.opts.rpcUrl });
+    const names = { [d.firms.mx1]: "MX-1", [d.firms.mx2]: "MX-2", [d.firms.mx3]: "MX-3" };
+    const model = buildStatus(views, overlay, names);
+    expect(model.found).toBe(true);
+    expect(model.receiptHash).toBe(views.batch?.receipt_hash);
+    expect(model.rows).toHaveLength(views.payouts.length);
+    for (const v of views.payouts) {
+      const row = model.rows.find((r) => r.id === v.id);
+      expect(row?.state).toBe(v.state);
+      expect(row?.penalty).toBe(formatUsdc(BigInt(v.penalties_total)));
+      expect(row?.route).toBe(v.firms_tried.map((f) => names[f]).join(" → "));
+    }
+    const rows = csv
+      .trim()
+      .split("\n")
+      .slice(1)
+      .map((l) => l.split(","));
+    expect(model.rows.map((r) => r.payee)).toEqual(
+      rows.map(([name, clabe]) => `${name} ****${clabeLast4(clabe)}`),
+    );
+  });
+
+  it("(i) F16: the scoreboard recomputed from events equals the contract's counters", async () => {
+    const { chain, deployment: d } = stack;
+    const events = parseElivoEvents(chain.calls.flatMap((c) => c.logs ?? []));
+    const views = await chain.view<PayoutView[]>(d.escrow, "get_batch_payouts", { batch_id: batchId });
+    const amounts = Object.fromEntries(views.map((p) => [`${p.batch_id}:${p.id}`, p.amount]));
+    const fromEvents = scoreboardFromEvents(events, amounts);
+    const fromChain = scoreboardFromFirms(
+      await chain.view<Array<[string, FirmView]>>(d.escrow, "list_firms"),
+    );
+    expect(Object.values(fromChain).some((f) => f.onTime + f.late > 0)).toBe(true);
+    for (const [id, c] of Object.entries(fromChain)) {
+      const e = fromEvents[id] ?? { onTime: 0, late: 0, penaltiesPaid: "0", volume: "0" };
+      expect({
+        id,
+        onTime: e.onTime,
+        late: e.late,
+        penaltiesPaid: e.penaltiesPaid,
+        volume: e.volume,
+      }).toEqual({
+        id,
+        onTime: c.onTime,
+        late: c.late,
+        penaltiesPaid: c.penaltiesPaid,
+        volume: c.volume,
+      });
     }
   });
 });

@@ -125,6 +125,18 @@ export class Engine {
     return this.deps.escrowId;
   }
 
+  get network(): string {
+    return this.deps.network;
+  }
+
+  get graceNs(): bigint {
+    return this.deps.graceNs;
+  }
+
+  get proposalSettings(): EngineDeps["proposal"] {
+    return this.deps.proposal;
+  }
+
   // ---------- periodic work ----------
 
   async tick(): Promise<void> {

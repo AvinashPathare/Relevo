@@ -332,14 +332,16 @@ clearly labelled.
 Integration scenarios (near-workspaces): happy path, late with reroute, refund, bond
 exhaustion, paused contract, double settlement after reroute.
 
-## 10. Commands (README must match)
+## 10. Commands (README must match; updated 12 Nov with Plan 3)
 
 ```
-pnpm install && pnpm setup       # deps, sandbox binary, checks toolchain
+make setup                       # pnpm install, Sputnik wasm (hash-checked), local keys
 make demo                        # full flow on local sandbox, prints receipt + verify result
-make demo-testnet                # same on testnet (faucet accounts, fresh deploy)
+make demo-testnet                # same on testnet (needs the deployer's keys)
 make test                        # cargo test (unit + proptest + workspaces) + vitest
-pnpm dev                         # web app + router + sims against sandbox
+pnpm dev                         # web app + router + sims against sandbox (demo signer)
+pnpm dev:testnet                 # same against the testnet deployment (MyNearWallet)
+pnpm web:testnet                 # read-only web app against testnet: /chain/<id>, /firms
 ```
 
 ## 11. Build order and cut lines
