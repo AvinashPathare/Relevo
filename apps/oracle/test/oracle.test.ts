@@ -1,7 +1,7 @@
 import { keyFromSeed, verify } from "@elivo/shared/keys";
 import { exclusionMessage, proofMessage } from "@elivo/shared/messages";
 import { describe, expect, it } from "vitest";
-import { createOracle, type OracleDeps } from "../src/oracle.ts";
+import { createOracle, type OracleDeps, routerTimeoutMs } from "../src/oracle.ts";
 
 const ESCROW = "escrow.test.near";
 const key = keyFromSeed(new Uint8Array(32).fill(1));
@@ -121,5 +121,12 @@ describe("oracle", () => {
   it("serves the label at /", async () => {
     const { app } = setup(assigned);
     expect((await app.inject({ method: "GET", url: "/" })).json().label).toMatch(/Testnet prototype/);
+  });
+});
+
+describe("routerTimeoutMs", () => {
+  it("waits longer than one signed testnet call (up to 90 s) before giving up on the router", () => {
+    expect(routerTimeoutMs("testnet")).toBe(120_000);
+    expect(routerTimeoutMs("sandbox")).toBe(30_000);
   });
 });

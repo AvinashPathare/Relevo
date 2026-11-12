@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Chain } from "../src/chain.ts";
+import { keyFromSeed } from "../src/keys.ts";
 
 function fakeProvider(script: Array<() => unknown>) {
   let i = 0;
@@ -136,5 +137,31 @@ describe("Chain endpoint rotation", () => {
       retryDelayMs: 1,
     });
     expect(await chain.blockTimeNs()).toBe(7n);
+  });
+});
+
+describe("Chain signer bookkeeping", () => {
+  const key = keyFromSeed(new Uint8Array(32).fill(7));
+  // A node that never answers: every signed call times out (after 6 × timeoutMs).
+  const silent = { viewAccessKey: () => new Promise(() => {}), callFunction: () => new Promise(() => {}) };
+
+  it("reuses one account object per signer while the provider is unchanged", () => {
+    const chain = new Chain({ rpcUrl: "http://x", network: "sandbox", provider: silent as never });
+    expect(chain.account("router.t", key)).toBe(chain.account("router.t", key));
+    expect(chain.account("router.t", key)).not.toBe(chain.account("other.t", key));
+  });
+
+  it("keeps only the most recent calls in its log", async () => {
+    const chain = new Chain({
+      rpcUrl: "http://x",
+      network: "sandbox",
+      provider: silent as never,
+      timeoutMs: 2,
+      maxRecordedCalls: 2,
+    });
+    const s = chain.signer("router.t", key);
+    for (const m of ["assign", "settle", "refund"])
+      await s.call("escrow.t", m, {}, { gasTgas: 10 }).catch(() => {});
+    expect(chain.calls.map((c) => c.method)).toEqual(["settle", "refund"]);
   });
 });

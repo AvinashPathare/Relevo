@@ -77,7 +77,8 @@ export class Store {
     this.update(draftId, (d) => {
       d.txs[payoutId] ??= {};
       d.txs[payoutId][kind] ??= [];
-      d.txs[payoutId][kind].push(hash);
+      // The exclusion path and the tick can both report the same refund; keep each hash once.
+      if (!d.txs[payoutId][kind].includes(hash)) d.txs[payoutId][kind].push(hash);
     });
   }
 }

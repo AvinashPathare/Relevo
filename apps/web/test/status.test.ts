@@ -23,8 +23,19 @@ describe("buildStatus labels", () => {
   });
   it("Delivered late without a reroute", () => {
     expect(
-      label({ state: "Delivered", firm: "mx2.t", firms_tried: ["mx2.t"], delivered_at_ns: String(150n * S) }),
+      label({
+        state: "Delivered",
+        firm: "mx2.t",
+        firms_tried: ["mx2.t"],
+        delivered_at_ns: String(150n * S),
+        penalties_total: "300000",
+      }),
     ).toBe("Delivered late by MX-2 (penalty charged)");
+  });
+  it("Delivered late with no penalty does not claim one was charged", () => {
+    expect(
+      label({ state: "Delivered", firm: "mx2.t", firms_tried: ["mx2.t"], delivered_at_ns: String(150n * S) }),
+    ).toBe("Delivered late by MX-2 (no penalty charged)");
   });
   it("Refunded after an exclusion", () => {
     expect(label({ state: "Refunded", excluded: true, firms_tried: ["mx2.t"] })).toBe(
@@ -55,6 +66,10 @@ describe("buildStatus labels", () => {
   });
   it("Waiting for a firm", () => {
     expect(label({})).toBe("Waiting for a firm");
+    expect(label({}, 130n * S)).toBe("Waiting for a firm");
+  });
+  it("Not assigned by the cut-off", () => {
+    expect(label({}, 150n * S)).toBe("No firm assigned by the cut-off: refund at the deadline");
   });
 });
 

@@ -37,7 +37,22 @@ export default function NewBatchPage() {
       setError((e as Error).message);
     }
   };
-  const sample = async (name: string) => validate(await (await fetch(`/router/samples/${name}`)).text());
+  const sample = async (name: string) => {
+    setError(null);
+    let text: string;
+    try {
+      const r = await fetch(`/router/samples/${name}`);
+      if (!r.ok) {
+        setError(`Could not load the sample: router HTTP ${r.status}`);
+        return;
+      }
+      text = await r.text();
+    } catch {
+      setError("Could not load the sample: the router is not running. Start the app with pnpm dev.");
+      return;
+    }
+    await validate(text);
+  };
 
   return (
     <div className="stack">

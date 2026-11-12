@@ -93,28 +93,29 @@ Production needs:
 
 ## Improvements to the current code
 
-These were found in the final review and are deferred because they don't affect the demo:
+The final review found these issues; they are now fixed, each covered by a test:
 
-1. The demo signer checks the proposal kind and target. It doesn't compare the router, oracle key or bond deposit in the proposal with the contract's live config.
-2. "Approved: waiting for the escrow" can wait forever if the escrow refused the funding (for example while paused). It should time out and say so.
-3. Unknown batch ids:
-   - polling never stops for an unknown draft or batch;
-   - an unknown draft still offers "Create DAO proposal";
-   - `/chain/abc` shows a raw error instead of "No batch abc".
-4. The 1Click timeout applies per stage, so a slow response can take about 16 seconds to report, and timed-out requests are not cancelled.
-5. Label precision:
-   - "(penalty charged)" appears even when the penalty was 0;
-   - "Waiting for a firm" is shown after the cut-off has passed;
-   - the firms page hard-codes the 20× exposure multiple instead of reading it from the contract.
-6. The sample buttons on `/new` don't handle a router error.
-7. If the web server never starts, `pnpm dev` can leave the local sandbox running.
-8. The council list counts every group role in the DAO policy, whatever its permissions.
-9. The router can store the same refund transaction twice. The page shows it once, but the receipt may list it twice.
+1. **Stale proposals are refused before signing.** Both the demo signer and the wallet signer read the escrow's live config. They refuse a funding proposal whose router or oracle key the escrow would reject, which would otherwise end as "approved, never funded". The demo signer also checks that the deposit equals the DAO's proposal bond.
+2. **"Approved: waiting for the escrow" no longer waits silently.** If the escrow has not recorded the batch a while after approval (60 s on sandbox, 3 min on testnet), the page says the escrow may have refused the funding and that the USDC then went back to the DAO.
+3. **Unknown ids:**
+   - polling stops for a draft the router doesn't know, and for a batch id the escrow doesn't have;
+   - an unknown draft no longer offers "Create DAO proposal";
+   - `/chain/abc` shows "No batch abc" without querying the chain.
+4. **1Click quotes:** one deadline covers the whole request, headers and body, and a timed-out request is cancelled.
+5. **Labels:**
+   - a late delivery with no penalty says "(no penalty charged)";
+   - a payout that no firm took by its cut-off says it will be refunded at the deadline;
+   - the firms page reads the exposure multiple from the contract.
+6. **Sample buttons:** they report a router error instead of validating the error page as a CSV.
+7. **`pnpm dev` clean-up:** a failed start now tears down the local sandbox and the demo signer.
+8. **Council list:** only group roles that may approve a function-call proposal count as council.
+9. **Refunds recorded once:** the router stores each transaction hash once, so a receipt can't list a refund twice.
 
-Also worth doing soon:
-- event fields like `payout_id` are JSON numbers; strings would be safer for other languages;
-- the router recreates a near-api-js account per call, and its in-memory call log grows during long runs;
-- the oracle's client timeout is short for testnet.
+Also done:
+- the router reuses one near-api-js account per signer, and keeps only the most recent 5,000 calls in its in-memory log;
+- the oracle waits up to 120 s for the router on testnet (30 s on sandbox), longer than one signed testnet call can take.
+
+Checked and left as is: event fields like `payout_id` are `u32` in the contract, so JSON numbers are exact in every language. Amounts are already strings.
 
 ## Future of the project
 

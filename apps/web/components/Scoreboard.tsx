@@ -16,13 +16,14 @@ function line(r: ScoreRow): string {
   return `${r.name} · on time ${s.onTime}/${total} (${pct}) · penalties ${formatUsdc(BigInt(s.penaltiesPaid))} USDC · volume ${formatUsdc(BigInt(s.volume))} USDC`;
 }
 
-export function Scoreboard({ rows }: { rows: ScoreRow[] }) {
+/** `exposureMultiple` comes from the escrow's get_config: a firm's open exposure is capped at bond × it. */
+export function Scoreboard({ rows, exposureMultiple }: { rows: ScoreRow[]; exposureMultiple: number }) {
   return (
     <Window title="~/firms" status="live">
       <ul className="grid-2" style={{ listStyle: "none", padding: 0, margin: 0 }}>
         {rows.map((r) => {
           const s = r.score;
-          const exposureMax = BigInt(r.bond) * 20n;
+          const exposureMax = BigInt(r.bond) * BigInt(exposureMultiple);
           return (
             <Sticker as="li" key={s.firm} tone={s.penaltiesPaid !== "0" ? "peach" : "paper"}>
               <div className="row" style={{ justifyContent: "space-between" }}>
@@ -38,7 +39,7 @@ export function Scoreboard({ rows }: { rows: ScoreRow[] }) {
               <div className="small" style={{ margin: "10px 0" }}>
                 {line(r)}
               </div>
-              <div className="muted small">{`Bond ${formatUsdc(BigInt(r.bond))} USDC · max open exposure ${formatUsdc(exposureMax)} USDC${r.approved ? "" : " · not approved"}`}</div>
+              <div className="muted small">{`Bond ${formatUsdc(BigInt(r.bond))} USDC · max open exposure ${formatUsdc(exposureMax)} USDC (${exposureMultiple}× bond)${r.approved ? "" : " · not approved"}`}</div>
               <div style={{ marginTop: 10 }}>
                 <Progress
                   value={s.onTime}

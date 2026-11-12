@@ -34,12 +34,17 @@ export async function findProposalForDraft(
   return { id: hit.id, status: hit.status, kind: hit.kind, proposer: hit.proposer, votes: hit.votes ?? {} };
 }
 
-/** Accounts in the policy's Group roles (the council). */
-export function councilOf(policy: { roles?: Array<{ kind: unknown }> }): string[] {
+/** Sputnik permissions ("<kind label>:<action>") that let a role approve a FunctionCall proposal. */
+const APPROVES_CALL = new Set(["*:*", "*:VoteApprove", "call:*", "call:VoteApprove"]);
+
+/** Accounts in Group roles that may vote to approve a funding proposal (the council). */
+export function councilOf(policy: { roles?: Array<{ kind: unknown; permissions?: string[] }> }): string[] {
   const out = new Set<string>();
   for (const r of policy.roles ?? []) {
     const k = r.kind as { Group?: string[] };
-    if (k && typeof k === "object" && Array.isArray(k.Group)) for (const a of k.Group) out.add(a);
+    if (!(k && typeof k === "object" && Array.isArray(k.Group))) continue;
+    if (!(r.permissions ?? []).some((p) => APPROVES_CALL.has(p))) continue;
+    for (const a of k.Group) out.add(a);
   }
   return [...out];
 }

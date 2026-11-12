@@ -1,6 +1,6 @@
 "use client";
 import { scoreboardFromFirms } from "@elivo/shared/scoreboard";
-import type { FirmView } from "@elivo/shared/views";
+import type { ConfigView, FirmView } from "@elivo/shared/views";
 import { useEffect, useState } from "react";
 import { Scoreboard, type ScoreRow } from "../../components/Scoreboard.tsx";
 import { Eyebrow } from "../../components/ui.tsx";
@@ -9,11 +9,16 @@ import { viewCall } from "../../lib/rpc.ts";
 
 export default function FirmsPage() {
   const [rows, setRows] = useState<ScoreRow[] | null>(null);
+  const [multiple, setMultiple] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     (async () => {
       const cfg = await fetchConfig();
-      const list = await viewCall<Array<[string, FirmView]>>(cfg.escrow, "list_firms");
+      const [list, escrowCfg] = await Promise.all([
+        viewCall<Array<[string, FirmView]>>(cfg.escrow, "list_firms"),
+        viewCall<ConfigView>(cfg.escrow, "get_config"),
+      ]);
+      setMultiple(escrowCfg.exposure_multiple);
       const scores = scoreboardFromFirms(list);
       const names = firmNames(cfg);
       setRows(
@@ -39,7 +44,11 @@ export default function FirmsPage() {
         </p>
       </div>
       {error && <p className="bad">Could not load: {error}</p>}
-      {rows ? <Scoreboard rows={rows} /> : !error && <p className="muted">Loading…</p>}
+      {rows && multiple !== null ? (
+        <Scoreboard rows={rows} exposureMultiple={multiple} />
+      ) : (
+        !error && <p className="muted">Loading…</p>
+      )}
     </div>
   );
 }

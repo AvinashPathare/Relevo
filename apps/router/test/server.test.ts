@@ -39,7 +39,7 @@ function setup(proposalsFor: (draftId: string, batchHash: string) => object[] = 
         get_policy: {
           proposal_bond: "1",
           roles: [
-            { name: "council", kind: { Group: ["c.test"] } },
+            { name: "council", kind: { Group: ["c.test"] }, permissions: ["*:VoteApprove"] },
             { name: "all", kind: "Everyone" },
           ],
         },

@@ -37,6 +37,7 @@ it("renders one line per firm", () => {
           },
         },
       ]}
+      exposureMultiple={20}
     />,
   );
   expect(
@@ -46,4 +47,29 @@ it("renders one line per firm", () => {
     screen.getByText("MX-3 · on time 0/1 (0%) · penalties 0.50 USDC · volume 1,000.00 USDC"),
   ).toBeTruthy();
   expect(screen.getByText(/Recomputed from events in the test suite/)).toBeTruthy();
+});
+
+it("shows max open exposure with the contract's exposure multiple", () => {
+  render(
+    <Scoreboard
+      exposureMultiple={10}
+      rows={[
+        {
+          name: "MX-2",
+          bond: "1000000000",
+          approved: true,
+          score: {
+            firm: "mx2",
+            onTime: 0,
+            late: 0,
+            onTimeRate: null,
+            penaltiesPaid: "0",
+            volume: "0",
+            reroutedAway: 0,
+          },
+        },
+      ]}
+    />,
+  );
+  expect(screen.getByText("Bond 1,000.00 USDC · max open exposure 10,000.00 USDC (10× bond)")).toBeTruthy();
 });

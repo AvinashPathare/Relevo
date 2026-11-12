@@ -78,7 +78,9 @@ function labelFor(p: PayoutView, name: (id: string | null) => string, nowNs?: bi
     case "Delivered":
       if (rerouted) return `Delivered after reroute by ${firm}`;
       if (p.delivered_at_ns && BigInt(p.delivered_at_ns) > BigInt(p.cutoff_ns))
-        return `Delivered late by ${firm} (penalty charged)`;
+        return BigInt(p.penalties_total) > 0n
+          ? `Delivered late by ${firm} (penalty charged)`
+          : `Delivered late by ${firm} (no penalty charged)`;
       return `Delivered on time by ${firm}`;
     case "Refunded":
       return p.excluded ? "Refunded: account closed (no penalty)" : "Refunded: deadline passed";
@@ -93,7 +95,10 @@ function labelFor(p: PayoutView, name: (id: string | null) => string, nowNs?: bi
         : `Assigned to ${firm}, cut-off passed`;
     }
     default:
-      return "Waiting for a firm";
+      // Funded: the router assigns only before the cut-off; after it the payout is refunded at the deadline.
+      return nowNs !== undefined && nowNs >= BigInt(p.cutoff_ns)
+        ? "No firm assigned by the cut-off: refund at the deadline"
+        : "Waiting for a firm";
   }
 }
 
@@ -139,4 +144,9 @@ export function buildStatus(
     },
     rows,
   };
+}
+
+/** The model for a batch id the escrow doesn't have (StatusView shows "No batch <id> on <escrow>"). */
+export function notFoundModel(): StatusModel {
+  return buildStatus({ batch: null, payouts: [], config: { paused: false } as ConfigView }, null, {});
 }

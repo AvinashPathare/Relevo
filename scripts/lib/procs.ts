@@ -63,8 +63,14 @@ export function stopAll(): void {
   for (const c of children) if (c.exitCode === null) c.kill("SIGTERM");
 }
 
-for (const sig of ["SIGINT", "SIGTERM"] as const) {
-  process.on(sig, async () => {
+let stopping: Promise<void> | null = null;
+
+/**
+ * Kills the children, then runs the stop hooks (best effort, at most 5 s). Used on Ctrl-C and on the
+ * failure path, so a failed start still tears down what it set up. Runs once; later calls wait for it.
+ */
+export function shutdown(): Promise<void> {
+  stopping ??= (async () => {
     stopAll();
     const pending = hooks.map(async (h) => {
       try {
@@ -73,7 +79,14 @@ for (const sig of ["SIGINT", "SIGTERM"] as const) {
         // best effort
       }
     });
-    await Promise.race([Promise.all(pending), new Promise((r) => setTimeout(r, 5_000))]);
+    await Promise.race([Promise.all(pending), new Promise((r) => setTimeout(r, 5_000).unref())]);
+  })();
+  return stopping;
+}
+
+for (const sig of ["SIGINT", "SIGTERM"] as const) {
+  process.on(sig, async () => {
+    await shutdown();
     process.exit(130);
   });
 }

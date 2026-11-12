@@ -12,11 +12,21 @@ export interface ProposeViewProps {
   council: string[];
   signer: Signer;
   funded: boolean;
+  /** Approved for a while, and the escrow still hasn't recorded the batch. */
+  stalled?: boolean;
   /** Called after a signing step returns (demo signer) so the page can refresh. */
   onDone?: () => void;
 }
 
-export function ProposeView({ draftId, proposal, council, signer, funded, onDone }: ProposeViewProps) {
+export function ProposeView({
+  draftId,
+  proposal,
+  council,
+  signer,
+  funded,
+  stalled,
+  onDone,
+}: ProposeViewProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const run = (f: () => Promise<void>) => async () => {
@@ -83,7 +93,12 @@ export function ProposeView({ draftId, proposal, council, signer, funded, onDone
         </div>
       )}
       {proposal && proposal.status === "Approved" && (
-        <p>Approved: waiting for the escrow to record the batch</p>
+        <div className="stack">
+          <p>Approved: waiting for the escrow to record the batch</p>
+          {stalled && (
+            <p className="bad">{`Proposal #${proposal.id} was approved, but the escrow has not recorded the batch. The escrow may have refused the funding (for example, while paused); if so, the USDC went back to the DAO.`}</p>
+          )}
+        </div>
       )}
       {proposal && !["InProgress", "Approved"].includes(proposal.status) && (
         <p className="bad">{`Proposal #${proposal.id} is ${proposal.status}. Nothing was funded.`}</p>

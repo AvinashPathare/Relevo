@@ -80,6 +80,46 @@ describe("1Click pay-in quoter", () => {
     expect(Date.now() - t0).toBeLessThan(1_000);
   });
 
+  it("applies one deadline to the whole request, headers and body together", async () => {
+    // Headers arrive at 60% of the budget, the body would take another 60%: over budget in total.
+    const { f } = fakeFetch(
+      () =>
+        new Promise<Response>((resolve) =>
+          setTimeout(
+            () =>
+              resolve(
+                new Response(
+                  new ReadableStream({
+                    start(c) {
+                      setTimeout(() => {
+                        c.enqueue(new TextEncoder().encode(JSON.stringify(recorded)));
+                        c.close();
+                      }, 120);
+                    },
+                  }),
+                  { status: 201 },
+                ),
+              ),
+            120,
+          ),
+        ),
+    );
+    const t0 = Date.now();
+    const q = await createPayinQuoter({ fetch: f, timeoutMs: 200 }).quote(ETH, "1");
+    expect(q).toEqual({ ok: false, reason: "timeout" });
+    expect(Date.now() - t0).toBeLessThan(230);
+  });
+
+  it("cancels the request when it times out", async () => {
+    let signal: AbortSignal | undefined;
+    const { f } = fakeFetch((_u, init) => {
+      signal = init?.signal ?? undefined;
+      return new Promise<Response>(() => {});
+    });
+    await createPayinQuoter({ fetch: f, timeoutMs: 30 }).quote(ETH, "1");
+    expect(signal?.aborted).toBe(true);
+  });
+
   it("reports HTTP errors and bad bodies", async () => {
     const e500 = fakeFetch(() => new Response("boom", { status: 500 }));
     expect(await createPayinQuoter({ fetch: e500.f }).quote(ETH, "1")).toEqual({

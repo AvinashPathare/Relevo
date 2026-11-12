@@ -95,3 +95,12 @@ export function createOracle(deps: OracleDeps): FastifyInstance {
 
   return app;
 }
+
+/**
+ * How long the oracle waits for the router to accept a proof or exclusion. The router answers after its
+ * settle/exclude transaction lands, and a signed testnet call may take up to 90 s (6 × the 15 s RPC
+ * timeout), so testnet gets more room than the sandbox.
+ */
+export function routerTimeoutMs(network: string): number {
+  return network === "testnet" ? 120_000 : 30_000;
+}

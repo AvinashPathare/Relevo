@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findProposalForDraft } from "../src/dao.ts";
+import { councilOf, findProposalForDraft } from "../src/dao.ts";
 
 const prop = (id: number, draft: string, status = "InProgress") => ({
   id,
@@ -45,5 +45,21 @@ describe("findProposalForDraft", () => {
     const seen2: Array<{ method: string; args?: object }> = [];
     await findProposalForDraft(fakeView(120, [], seen2), "dao", "d-1");
     expect(seen2.find((s) => s.method === "get_proposals")?.args).toEqual({ from_index: 70, limit: 50 });
+  });
+});
+
+describe("councilOf", () => {
+  it("lists only accounts in group roles that may approve a function-call proposal", () => {
+    const policy = {
+      roles: [
+        { name: "all", kind: "Everyone", permissions: ["*:AddProposal"] },
+        { name: "council", kind: { Group: ["c.test"] }, permissions: ["*:AddProposal", "*:VoteApprove"] },
+        { name: "calls", kind: { Group: ["k.test"] }, permissions: ["call:VoteApprove"] },
+        { name: "admins", kind: { Group: ["a.test"] }, permissions: ["*:*"] },
+        { name: "proposers", kind: { Group: ["p.test"] }, permissions: ["*:AddProposal"] },
+        { name: "transfers", kind: { Group: ["t.test"] }, permissions: ["transfer:VoteApprove"] },
+      ],
+    };
+    expect(councilOf(policy).sort()).toEqual(["a.test", "c.test", "k.test"]);
   });
 });

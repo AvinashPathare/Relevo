@@ -63,7 +63,11 @@ export function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promis
 export class Chain {
   private readonly providers: JsonRpcProvider[];
   private idx = 0;
+  /** Most recent signed calls (newest last), capped at maxRecordedCalls so long runs don't grow it. */
   readonly calls: RecordedCall[] = [];
+  private readonly maxCalls: number;
+  /** One near-api-js Account per (provider, signer), so its nonce cache is reused between calls. */
+  private readonly accounts = new Map<string, Account>();
   private readonly retryDelayMs: number;
   private readonly timeoutMs: number;
 
@@ -79,6 +83,8 @@ export class Chain {
       retryDelayMs?: number;
       /** Per-request timeout for views and block queries; signed calls get 6x this. */
       timeoutMs?: number;
+      /** How many signed calls `calls` keeps (default 5000). */
+      maxRecordedCalls?: number;
     },
   ) {
     this.providers =
@@ -88,6 +94,7 @@ export class Chain {
         : [opts.rpcUrl, ...(opts.fallbackRpcUrls ?? [])].map((url) => new JsonRpcProvider({ url })));
     this.retryDelayMs = opts.retryDelayMs ?? 500;
     this.timeoutMs = opts.timeoutMs ?? 15_000;
+    this.maxCalls = opts.maxRecordedCalls ?? 5_000;
   }
 
   /** The provider currently in use. */
@@ -117,8 +124,14 @@ export class Chain {
   }
 
   account(accountId: string, key: Ed25519Key): Account {
-    const kp = KeyPair.fromString(key.secretKeyStr as `ed25519:${string}`);
-    return new Account(accountId, this.provider, new KeyPairSigner(kp));
+    const id = `${this.idx}|${accountId}|${key.publicKeyStr}`;
+    let acct = this.accounts.get(id);
+    if (!acct) {
+      const kp = KeyPair.fromString(key.secretKeyStr as `ed25519:${string}`);
+      acct = new Account(accountId, this.provider, new KeyPairSigner(kp));
+      this.accounts.set(id, acct);
+    }
+    return acct;
   }
 
   signer(accountId: string, key: Ed25519Key): ChainAccount {
@@ -128,6 +141,7 @@ export class Chain {
         const acct = this.account(accountId, key); // bound to the provider currently in use
         const rec: RecordedCall = { signer: accountId, contractId, method, args };
         this.calls.push(rec);
+        if (this.calls.length > this.maxCalls) this.calls.splice(0, this.calls.length - this.maxCalls);
         try {
           const r = await withTimeout(
             acct.callFunctionRaw({

@@ -55,29 +55,49 @@ export function createPayinQuoter(
   const now = opts.now ?? Date.now;
   let cache: { at: number; tokens: unknown[] } | null = null;
 
-  const withTimeout = <T>(p: Promise<T>): Promise<T> => {
+  /**
+   * One budget for a whole request (headers and body): the first step that would run past it fails with
+   * Timeout, and the HTTP request itself is aborted so nothing keeps running after the caller gave up.
+   */
+  const deadline = () => {
+    const ctl = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const t = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Timeout()), timeoutMs);
+    const expired = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        ctl.abort();
+        reject(new Timeout());
+      }, timeoutMs);
     });
-    return Promise.race([p, t]).finally(() => clearTimeout(timer));
+    expired.catch(() => {});
+    return {
+      signal: ctl.signal,
+      within: <T>(p: Promise<T>): Promise<T> => Promise.race([p, expired]),
+      done: () => clearTimeout(timer),
+    };
   };
 
   return {
     async tokens() {
       if (cache && now() - cache.at < 10 * 60_000) return cache.tokens;
-      const r = await withTimeout(f(`${base}/v0/tokens`));
-      const tokens = (await r.json()) as unknown[];
-      cache = { at: now(), tokens };
-      return tokens;
+      const dl = deadline();
+      try {
+        const r = await dl.within(f(`${base}/v0/tokens`, { signal: dl.signal }));
+        const tokens = (await dl.within(r.json())) as unknown[];
+        cache = { at: now(), tokens };
+        return tokens;
+      } finally {
+        dl.done();
+      }
     },
 
     async quote(assetId, amountUnits) {
       const meta = PAYIN_ASSETS[assetId];
       if (!meta) return { ok: false, reason: "unknown_asset" };
+      const dl = deadline();
       try {
-        const r = await withTimeout(
+        const r = await dl.within(
           f(`${base}/v0/quote`, {
+            signal: dl.signal,
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
@@ -97,7 +117,7 @@ export function createPayinQuoter(
           }),
         );
         if (!r.ok) return { ok: false, reason: `http_${r.status}` };
-        const j = (await withTimeout(r.json()).catch((e) => {
+        const j = (await dl.within(r.json()).catch((e) => {
           if (e instanceof Timeout) throw e;
           return null;
         })) as {
@@ -123,7 +143,9 @@ export function createPayinQuoter(
           appFeeBps: (j?.quoteRequest?.appFees ?? []).reduce((s, x) => s + Number(x.fee ?? 0), 0),
         };
       } catch (e) {
-        return { ok: false, reason: e instanceof Timeout ? "timeout" : "network_error" };
+        return { ok: false, reason: e instanceof Timeout || dl.signal.aborted ? "timeout" : "network_error" };
+      } finally {
+        dl.done();
       }
     },
   };

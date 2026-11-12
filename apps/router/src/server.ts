@@ -65,7 +65,10 @@ export function createRouterServer(engine: Engine, opts: ServerOptions = {}): Fa
       isElivoFundingKind(kind, { usdc, escrow: engine.escrowId }, draft.batch_hash),
     );
     if (!p) return reply.code(404).send({ error: "no_proposal" });
-    const policy = await view<{ roles?: Array<{ kind: unknown }> }>(daoId, "get_policy");
+    const policy = await view<{ roles?: Array<{ kind: unknown; permissions?: string[] }> }>(
+      daoId,
+      "get_policy",
+    );
     return { ...p, council: councilOf(policy) };
   });
 

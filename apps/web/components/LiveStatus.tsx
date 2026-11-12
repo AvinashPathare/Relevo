@@ -1,7 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { fetchConfig, firmNames, type WebConfig } from "../lib/config.ts";
-import { buildStatus, loadChainViews, type RouterBatchStatus, type StatusModel } from "../lib/status.ts";
+import {
+  buildStatus,
+  loadChainViews,
+  notFoundModel,
+  type RouterBatchStatus,
+  type StatusModel,
+} from "../lib/status.ts";
 import { StatusView } from "./StatusView.tsx";
 
 export interface LiveStatusProps {
@@ -16,6 +22,8 @@ export interface LiveStatusProps {
 }
 
 const idKey = (draftId: string) => `elivo:onchain:${draftId}`;
+/** Escrow batch ids are u64 counters; anything else can't name a batch. */
+const BATCH_ID = /^\d{1,20}$/;
 
 /** The on-chain batch id a draft was last seen funded as, so a reload can read the chain without the router. */
 function rememberedId(draftId: string | undefined): string | undefined {
@@ -58,6 +66,10 @@ export function LiveStatus({ batchId, draftId, onOverlay, pollMs }: LiveStatusPr
         setError((e as Error).message);
         return;
       }
+      if (batchId !== undefined && !BATCH_ID.test(batchId)) {
+        setModel(notFoundModel());
+        return;
+      }
       const every = pollMs ?? (c.network === "testnet" ? 5_000 : 2_000);
       knownId.current ??= rememberedId(draftId);
       const poll = async () => {
@@ -68,7 +80,11 @@ export function LiveStatus({ batchId, draftId, onOverlay, pollMs }: LiveStatusPr
           try {
             const r = await fetch(`/router/batches/${encodeURIComponent(draftId)}`);
             online = r.ok || r.status === 404;
-            if (r.status === 404) setUnknownDraft(true);
+            if (r.status === 404) {
+              // The router has never seen this draft: nothing will change by asking again.
+              setUnknownDraft(true);
+              return;
+            }
             if (r.ok) {
               overlay = (await r.json()) as RouterBatchStatus;
               lastOverlay.current = overlay;
@@ -93,7 +109,8 @@ export function LiveStatus({ batchId, draftId, onOverlay, pollMs }: LiveStatusPr
             const m = buildStatus(views, overlay, firmNames(c), BigInt(Date.now()) * 1_000_000n);
             setModel(m);
             setError(null);
-            done = m.terminal && m.anchored;
+            // Finished, or a /chain/<id> that doesn't exist: stop polling either way.
+            done = (m.terminal && m.anchored) || (!!batchId && !m.found);
           } catch (e) {
             setError((e as Error).message);
           }

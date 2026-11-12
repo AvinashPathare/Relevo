@@ -2,7 +2,7 @@
 import { Chain } from "@elivo/shared/chain";
 import { env } from "@elivo/shared/config";
 import { keyFromSecret } from "@elivo/shared/keys";
-import { createOracle, type Order } from "./oracle.ts";
+import { createOracle, type Order, routerTimeoutMs } from "./oracle.ts";
 
 const e = env();
 const need = (k: string) => process.env[k] ?? (console.error(`missing ${k}`), process.exit(2));
@@ -14,7 +14,7 @@ async function post(path: string, body: object) {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(routerTimeoutMs(e.network)),
   });
   if (!r.ok) throw new Error(`${path} ${r.status} ${await r.text()}`);
 }

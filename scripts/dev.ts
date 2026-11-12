@@ -11,7 +11,7 @@ import { join, resolve } from "node:path";
 import { env, loadDeployment } from "@elivo/shared/config";
 import { LABEL } from "@elivo/shared/receipt";
 import { createDemoSigner, DEMO_SIGNER_LABEL } from "./lib/demo-signer.ts";
-import { onStop, setLogDir, startCommand, stopAll, waitHealthy } from "./lib/procs.ts";
+import { onStop, setLogDir, shutdown, startCommand, waitHealthy } from "./lib/procs.ts";
 import { setupSandbox, setupTestnet, startServices } from "./lib/stack.ts";
 import { nextDevArgs } from "./lib/web-args.ts";
 
@@ -88,8 +88,8 @@ async function main() {
   await new Promise(() => {});
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error(`dev failed: ${(err as Error).message}`);
-  stopAll();
+  await shutdown(); // also tears down the local sandbox and the demo signer
   process.exit(1);
 });

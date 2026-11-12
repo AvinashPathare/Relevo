@@ -15,13 +15,19 @@ const d: Deployment = {
 };
 
 const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString("base64");
-const kindFor = (receiver: string, escrow = d.escrow) => ({
+const LIVE = { router_id: d.router, oracle_pk: "ed25519:ORACLE" };
+const BOND = "1000000000000000000000000";
+const kindFor = (receiver: string, escrow = d.escrow, fund: Partial<typeof LIVE> = {}) => ({
   FunctionCall: {
     receiver_id: receiver,
     actions: [
       {
         method_name: "ft_transfer_call",
-        args: b64({ receiver_id: escrow, amount: "1", msg: JSON.stringify({ kind: "fund_batch" }) }),
+        args: b64({
+          receiver_id: escrow,
+          amount: "1",
+          msg: JSON.stringify({ kind: "fund_batch", ...LIVE, ...fund }),
+        }),
         deposit: "1",
         gas: "150000000000000",
       },
@@ -31,6 +37,7 @@ const kindFor = (receiver: string, escrow = d.escrow) => ({
 
 let routerUrl = "";
 let nextKind: object = kindFor(d.usdc);
+let nextDeposit = BOND;
 const router = Fastify();
 
 beforeAll(async () => {
@@ -38,7 +45,7 @@ beforeAll(async () => {
     contractId: d.dao,
     method: "add_proposal",
     args: { proposal: { description: "Elivo payout batch d-1: x", kind: nextKind } },
-    depositYocto: "1000000000000000000000000",
+    depositYocto: nextDeposit,
     gasTgas: 100,
     kind: nextKind,
   }));
@@ -59,6 +66,8 @@ function signer(stored: object = kindFor(d.usdc)) {
   };
   const view = async <T>(_c: string, method: string): Promise<T> => {
     if (method === "get_proposal") return { id: 7, kind: stored, status: "InProgress" } as T;
+    if (method === "get_config") return { ...LIVE, paused: false } as T;
+    if (method === "get_policy") return { proposal_bond: BOND, roles: [] } as T;
     throw new Error(method);
   };
   return { app: createDemoSigner({ council, view, d, routerUrl }), calls };
@@ -72,6 +81,7 @@ describe("demo signer", () => {
 
   it("adds the router's funding proposal with its bond", async () => {
     nextKind = kindFor(d.usdc);
+    nextDeposit = BOND;
     const { app, calls } = signer();
     const r = await app.inject({ method: "POST", url: "/add_proposal", payload: { draft_id: "d-1" } });
     expect(r.statusCode).toBe(200);
@@ -111,6 +121,40 @@ describe("demo signer", () => {
     const { app, calls } = signer(kindFor(d.usdc, "thief.t"));
     const r = await app.inject({ method: "POST", url: "/approve", payload: { proposal_id: 7 } });
     expect(r.statusCode).toBe(400);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("refuses a proposal whose router or oracle key the escrow would reject", async () => {
+    nextDeposit = BOND;
+    for (const [fund, field] of [
+      [{ router_id: "old-router.t" }, "router_id"],
+      [{ oracle_pk: "ed25519:OLD" }, "oracle_pk"],
+    ] as const) {
+      nextKind = kindFor(d.usdc, d.escrow, fund);
+      const { app, calls } = signer();
+      const r = await app.inject({ method: "POST", url: "/add_proposal", payload: { draft_id: "d-1" } });
+      expect(r.statusCode).toBe(409);
+      expect(r.json()).toEqual({ error: "proposal_config_mismatch", field });
+      expect(calls).toHaveLength(0);
+    }
+  });
+
+  it("refuses a proposal whose deposit is not the DAO's proposal bond", async () => {
+    nextKind = kindFor(d.usdc);
+    nextDeposit = "1";
+    const { app, calls } = signer();
+    const r = await app.inject({ method: "POST", url: "/add_proposal", payload: { draft_id: "d-1" } });
+    expect(r.statusCode).toBe(409);
+    expect(r.json()).toEqual({ error: "proposal_config_mismatch", field: "proposal_bond" });
+    expect(calls).toHaveLength(0);
+    nextDeposit = BOND;
+  });
+
+  it("refuses to approve a proposal the escrow would reject", async () => {
+    const { app, calls } = signer(kindFor(d.usdc, d.escrow, { oracle_pk: "ed25519:OLD" }));
+    const r = await app.inject({ method: "POST", url: "/approve", payload: { proposal_id: 7 } });
+    expect(r.statusCode).toBe(409);
+    expect(r.json()).toEqual({ error: "proposal_config_mismatch", field: "oracle_pk" });
     expect(calls).toHaveLength(0);
   });
 });
