@@ -103,6 +103,12 @@ describe("verifyReceiptWeb agrees with the Node verifier", () => {
       expect(await verifyReceiptWeb(r, pk)).toEqual(verifyReceipt(r as Receipt, pk));
     });
 
+  it("treats a signature of the wrong length as malformed, not an exception", async () => {
+    const r = signed();
+    r.signature.sig = "c2hvcnQ=";
+    expect(await verifyReceiptWeb(r, key.publicKeyStr)).toEqual({ ok: false, reason: "malformed" });
+  });
+
   it("computes the same anchored hash", async () => {
     const r = signed();
     expect(await receiptHashB58Web(r)).toBe(receiptHashB58(r));

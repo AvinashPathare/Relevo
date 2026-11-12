@@ -35,11 +35,16 @@ export async function verifyReceiptWeb(r: unknown, expectedPk: string): Promise<
   if (rec.signature.public_key !== expectedPk) return { ok: false, reason: "key_mismatch" };
   const raw = rawKey(expectedPk);
   const sig = typeof rec.signature.sig === "string" ? fromBase64(rec.signature.sig) : null;
-  if (!raw || !sig) return { ok: false, reason: "malformed" };
+  // An ed25519 signature is 64 bytes; some WebCrypto builds throw on anything else instead of saying no.
+  if (!raw || !sig || sig.length !== 64) return { ok: false, reason: "malformed" };
   const { signature: _s, ...body } = rec;
-  const key = await crypto.subtle.importKey("raw", raw, { name: "Ed25519" }, false, ["verify"]);
-  const ok = await crypto.subtle.verify({ name: "Ed25519" }, key, sig, canonicalBytes(body));
-  return ok ? { ok: true } : { ok: false, reason: "bad_signature" };
+  try {
+    const key = await crypto.subtle.importKey("raw", raw, { name: "Ed25519" }, false, ["verify"]);
+    const ok = await crypto.subtle.verify({ name: "Ed25519" }, key, sig, canonicalBytes(body));
+    return ok ? { ok: true } : { ok: false, reason: "bad_signature" };
+  } catch {
+    return { ok: false, reason: "malformed" };
+  }
 }
 
 /** base58(sha256(canonical JSON of the whole signed receipt)): the hash the escrow anchors. */
