@@ -22,7 +22,7 @@ export function DaoVote({ draftId, cfg, funded }: { draftId: string; cfg: WebCon
     import("../lib/wallet.ts")
       .then(async ({ walletPort, WALLETS }) => {
         setWallets(WALLETS);
-        setSigner(walletSigner(await walletPort(), cfg.dao));
+        setSigner(walletSigner(await walletPort(), cfg));
       })
       .catch((e) => setError(`wallet: ${(e as Error).message}`));
   }, [cfg]);

@@ -5,35 +5,14 @@
  */
 import type { ChainAccount } from "@elivo/shared/chain";
 import type { Deployment } from "@elivo/shared/config";
+import { isElivoFundingKind } from "@elivo/shared/funding-kind";
 import Fastify, { type FastifyInstance } from "fastify";
 
 export const DEMO_SIGNER_LABEL = "Demo signer: local sandbox keys, not a wallet";
 
 type View = <T>(contractId: string, method: string, args?: object) => Promise<T>;
 
-interface FunctionCallKind {
-  FunctionCall?: {
-    receiver_id?: string;
-    actions?: Array<{ method_name?: string; args?: string }>;
-  };
-}
-
-/** A FunctionCall to the deployment's USDC with one ft_transfer_call to the escrow carrying fund_batch. */
-export function isElivoFundingKind(kind: unknown, d: Pick<Deployment, "usdc" | "escrow">): boolean {
-  const fc = (kind as FunctionCallKind)?.FunctionCall;
-  if (!fc || fc.receiver_id !== d.usdc || fc.actions?.length !== 1) return false;
-  const [a] = fc.actions;
-  if (a.method_name !== "ft_transfer_call" || typeof a.args !== "string") return false;
-  try {
-    const args = JSON.parse(Buffer.from(a.args, "base64").toString("utf8")) as {
-      receiver_id?: string;
-      msg?: string;
-    };
-    return args.receiver_id === d.escrow && JSON.parse(args.msg ?? "{}").kind === "fund_batch";
-  } catch {
-    return false;
-  }
-}
+export { isElivoFundingKind };
 
 export function createDemoSigner(opts: {
   council: ChainAccount;

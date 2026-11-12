@@ -1,5 +1,6 @@
 /** Router HTTP API (spec §8) plus the internal endpoints the oracle and firm simulators use. */
 import { readFileSync } from "node:fs";
+import { isElivoFundingKind } from "@elivo/shared/funding-kind";
 import { LABEL } from "@elivo/shared/receipt";
 import type { BatchView, PayoutView } from "@elivo/shared/views";
 import Fastify, { type FastifyInstance } from "fastify";
@@ -59,7 +60,10 @@ export function createRouterServer(engine: Engine, opts: ServerOptions = {}): Fa
     const daoId = engine.proposalSettings?.daoId;
     if (!daoId) return reply.code(404).send({ error: "no_dao_configured" });
     const view = engine.chain.view.bind(engine.chain);
-    const p = await findProposalForDraft(view, daoId, draft.id);
+    const usdc = engine.proposalSettings?.usdcId ?? "";
+    const p = await findProposalForDraft(view, daoId, draft.id, (kind) =>
+      isElivoFundingKind(kind, { usdc, escrow: engine.escrowId }, draft.batch_hash),
+    );
     if (!p) return reply.code(404).send({ error: "no_proposal" });
     const policy = await view<{ roles?: Array<{ kind: unknown }> }>(daoId, "get_policy");
     return { ...p, council: councilOf(policy) };
