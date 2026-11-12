@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@elivo/firm-sim": "workspace:*",
-    "@elivo/oracle": "workspace:*"
+    "@elivo/oracle": "workspace:*",
+    "@elivo/web": "workspace:*"
   }
 }

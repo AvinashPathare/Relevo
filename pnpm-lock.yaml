@@ -64,6 +64,9 @@ importers:
       '@elivo/oracle':
         specifier: workspace:*
         version: link:../oracle
+      '@elivo/web':
+        specifier: workspace:*
+        version: link:../web
 
   apps/web:
     dependencies:

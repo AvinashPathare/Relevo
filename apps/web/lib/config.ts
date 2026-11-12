@@ -10,6 +10,8 @@ export interface WebConfig {
   signer: "demo" | "wallet";
   routerAvailable: boolean;
   explorer: string | null;
+  /** The NEAR RPC the deployment uses (shown in the verify command; the browser itself uses /rpc). */
+  rpcUrl: string;
 }
 
 export async function fetchConfig(f: typeof fetch = fetch): Promise<WebConfig> {

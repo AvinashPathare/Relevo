@@ -18,6 +18,7 @@ export function GET(): Response {
     signer: d.network === "sandbox" && process.env.DEMO_SIGNER_URL ? "demo" : "wallet",
     routerAvailable: !!process.env.ROUTER_URL,
     explorer: d.network === "testnet" ? "https://testnet.nearblocks.io" : null,
+    rpcUrl: process.env.NEAR_RPC_URL ?? d.rpcUrl,
   };
   return Response.json(cfg);
 }
