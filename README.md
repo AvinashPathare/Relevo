@@ -71,7 +71,7 @@ The public key always comes from the chain (`--chain`) or from you (`--pubkey`),
 2. **Quote**: payees with the last 4 digits only, payouts, the 25 bps fee buffer, the total to lock, the fixed rate and the deadlines. Below that is a live 1Click pay-in quote (ETH, BTC, SOL or Base USDC). It is a mainnet price for illustration; 1Click's own app fee is shown.
 3. **Propose & vote** (`/batches/<id>`): create the Sputnik DAO proposal, then approve it as the council.
    - On the sandbox, a **demo signer** labelled "Demo signer: local sandbox keys, not a wallet" signs with the local council key. It only signs this app's funding proposal.
-   - On testnet (`pnpm dev:testnet`), you sign with MyNearWallet. Anyone can create the proposal; only a council member can approve it.
+   - On testnet (`pnpm dev:testnet`), the DAO steps are signed with MyNearWallet: anyone can create the proposal, and only a council member can approve it. Like `make demo-testnet`, this runs the router with the deployer's keys, so only whoever created the deployment can run it. It changes nothing on-chain at start-up. Without those keys, use `pnpm web:testnet` (read-only).
 4. **Live status**: each payout's state, route (e.g. MX-3 → MX-2), the penalty paid to the DAO, the proof reference and tx links. When the batch completes it shows the anchored receipt hash, a receipt download and the `verify-receipt` command.
 
 `/chain/<batch id>` shows any funded batch straight from the contract, with no router, and `/firms` shows each firm's bond, on-time record, penalties and volume. Payout state always comes from the chain, so a reload shows the same state. If the router goes down, a batch page keeps showing the on-chain state it already knows, and says the router is offline.

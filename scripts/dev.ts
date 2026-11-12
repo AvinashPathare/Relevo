@@ -26,6 +26,11 @@ const e = env({ ...process.env, ELIVO_NETWORK: network });
 const devDir = process.env.ELIVO_DEV_DIR ?? join(tmpdir(), "elivo-dev");
 setLogDir(join(devDir, "logs"));
 
+function required<T>(v: T | undefined, what: string): T {
+  if (v === undefined) throw new Error(`missing ${what}`);
+  return v;
+}
+
 function startWeb(webEnv: Record<string, string>) {
   startCommand("web", "pnpm", nextDevArgs(WEB_PORT), webEnv, resolve("apps/web"));
   return waitHealthy(`http://127.0.0.1:${WEB_PORT}/api/config`, 120_000);
@@ -45,7 +50,10 @@ async function main() {
       `Open http://localhost:${WEB_PORT}/chain/5 (the reference run) or /firms. No keys or router needed.`,
     );
   } else {
-    const s = network === "testnet" ? await setupTestnet() : await setupSandbox();
+    const s =
+      network === "testnet"
+        ? await setupTestnet(console.log, { adjustBonds: false, councilKey: false })
+        : await setupSandbox();
     onStop(s.stop);
     const routerStore = join(
       devDir,
@@ -60,7 +68,7 @@ async function main() {
     };
     if (network === "sandbox") {
       const signer = createDemoSigner({
-        council: s.chain.signer(s.d.council, s.keys.council),
+        council: s.chain.signer(s.d.council, required(s.keys.council, "council key")),
         view: s.chain.view.bind(s.chain),
         d: s.d,
         routerUrl: urls.router,
