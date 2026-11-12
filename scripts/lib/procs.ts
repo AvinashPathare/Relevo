@@ -3,6 +3,12 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { createWriteStream, mkdirSync } from "node:fs";
 
 const children: ChildProcess[] = [];
+const hooks: Array<() => Promise<void> | void> = [];
+
+/** Runs on Ctrl-C / SIGTERM after the children are killed (e.g. tearing down the local sandbox). */
+export function onStop(fn: () => Promise<void> | void): void {
+  hooks.push(fn);
+}
 
 export function startService(name: string, script: string, env: Record<string, string>): ChildProcess {
   mkdirSync(".data/logs", { recursive: true });
@@ -11,6 +17,23 @@ export function startService(name: string, script: string, env: Record<string, s
     env: { ...process.env, ...env },
     stdio: ["ignore", "pipe", "pipe"],
   });
+  child.stdout?.pipe(log);
+  child.stderr?.pipe(log);
+  children.push(child);
+  return child;
+}
+
+/** Like startService, but for any command (used for `next dev`). */
+export function startCommand(
+  name: string,
+  cmd: string,
+  args: string[],
+  env: Record<string, string>,
+  cwd?: string,
+): ChildProcess {
+  mkdirSync(".data/logs", { recursive: true });
+  const log = createWriteStream(`.data/logs/${name}.log`, { flags: "w" });
+  const child = spawn(cmd, args, { env: { ...process.env, ...env }, cwd, stdio: ["ignore", "pipe", "pipe"] });
   child.stdout?.pipe(log);
   child.stderr?.pipe(log);
   children.push(child);
@@ -35,8 +58,16 @@ export function stopAll(): void {
 }
 
 for (const sig of ["SIGINT", "SIGTERM"] as const) {
-  process.on(sig, () => {
+  process.on(sig, async () => {
     stopAll();
+    const pending = hooks.map(async (h) => {
+      try {
+        await h();
+      } catch {
+        // best effort
+      }
+    });
+    await Promise.race([Promise.all(pending), new Promise((r) => setTimeout(r, 5_000))]);
     process.exit(130);
   });
 }

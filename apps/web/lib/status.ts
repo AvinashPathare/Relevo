@@ -118,7 +118,9 @@ export function buildStatus(
       penalty: formatUsdc(BigInt(p.penalties_total)),
       proofRef: p.proof_ref,
       payee: r ? `${r.name} ****${r.clabe_last4}` : null,
-      txs: Object.entries(txs).flatMap(([kind, links]) => links.map((l) => ({ kind, ...l }))),
+      txs: Object.entries(txs).flatMap(([kind, links]) =>
+        links.filter((l, i) => links.findIndex((x) => x.hash === l.hash) === i).map((l) => ({ kind, ...l })),
+      ),
     };
   });
   return {

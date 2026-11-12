@@ -16,11 +16,15 @@
     "test": "vitest run --project unit --project web",
     "test:e2e": "vitest run --project e2e",
     "verify-receipt": "tsx packages/shared/src/bin/verify-receipt.ts",
-    "build:web": "pnpm --filter @elivo/web build"
+    "build:web": "pnpm --filter @elivo/web build",
+    "dev": "tsx scripts/dev.ts --network sandbox",
+    "dev:testnet": "tsx scripts/dev.ts --network testnet",
+    "web:testnet": "tsx scripts/dev.ts --network testnet --read-only"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.6",
     "@types/node": "26.6.6",
+    "fastify": "5.12.8",
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vitest": "5.1.0"

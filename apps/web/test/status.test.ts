@@ -80,6 +80,16 @@ describe("buildStatus model", () => {
     expect(m.rows[0].txs).toEqual([{ kind: "assign", hash: "tx-assign-0", url: null }]);
   });
 
+  it("lists each tx once even if the router recorded it twice", () => {
+    const dup = {
+      ...overlay,
+      payouts: overlay.payouts.map((p) =>
+        p.id === 2 ? { ...p, txs: { refund: [{ hash: "r1", url: null }, { hash: "r1", url: null }] } } : p,
+      ),
+    };
+    expect(buildStatus(views(), dup, FIRMS).rows[2].txs).toEqual([{ kind: "refund", hash: "r1", url: null }]);
+  });
+
   it("reports a missing batch as not found", () => {
     const m = buildStatus(views([], null), null, FIRMS);
     expect(m.found).toBe(false);
