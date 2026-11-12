@@ -19,11 +19,13 @@
     "build:web": "pnpm --filter @elivo/web build",
     "dev": "tsx scripts/dev.ts --network sandbox",
     "dev:testnet": "tsx scripts/dev.ts --network testnet",
-    "web:testnet": "tsx scripts/dev.ts --network testnet --read-only"
+    "web:testnet": "tsx scripts/dev.ts --network testnet --read-only",
+    "gen:vectors": "tsx scripts/gen-receipt-vectors.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.6",
     "@types/node": "26.6.6",
+    "ajv": "8.17.1",
     "fastify": "5.12.8",
     "tsx": "4.23.15",
     "typescript": "7.0.2",

@@ -1,0 +1,30 @@
+[
+  {
+    "file": "valid.json",
+    "description": "A genuine receipt: verify with the signing key.",
+    "public_key": "ed25519:J2xccRtuG43drESLYznHhLhQkLTdfepcKYbiQ9BsJVaf",
+    "expect": "ok",
+    "receipt_hash": "Dka7UhGkFnR1EdFgfVMD9VbmTWHNxv48XTbmaf81drRJ"
+  },
+  {
+    "file": "edited-amount.json",
+    "description": "valid.json with payout 1's amount_usdc changed after signing.",
+    "public_key": "ed25519:J2xccRtuG43drESLYznHhLhQkLTdfepcKYbiQ9BsJVaf",
+    "expect": "bad_signature",
+    "receipt_hash": "G56CyX3PL6HN3GwDN3S2mRHnBhLwcmVzgudb7eK8igmo"
+  },
+  {
+    "file": "valid.json",
+    "description": "valid.json checked against a key that is not the batch's receipt key.",
+    "public_key": "ed25519:5Z6Ay5NEcbg3xhopc522sBCRXQujkTiuDRnHGfQdcnSf",
+    "expect": "key_mismatch",
+    "receipt_hash": "Dka7UhGkFnR1EdFgfVMD9VbmTWHNxv48XTbmaf81drRJ"
+  },
+  {
+    "file": "unsigned.json",
+    "description": "valid.json with the signature removed.",
+    "public_key": "ed25519:J2xccRtuG43drESLYznHhLhQkLTdfepcKYbiQ9BsJVaf",
+    "expect": "malformed",
+    "receipt_hash": null
+  }
+]

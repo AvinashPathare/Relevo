@@ -1,0 +1,120 @@
+{
+  "version": "elivo-receipt-1",
+  "label": "Testnet prototype. Payout firms and SPEI receipts are simulated. Contract unaudited.",
+  "network": "testnet",
+  "escrow": "escrow.example.testnet",
+  "batch_id": "7",
+  "batch_hash": "5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f",
+  "funder": "dao.example.testnet",
+  "generated_at": "2026-11-12T12:00:00.000Z",
+  "payouts": [
+    {
+      "id": 0,
+      "amount_usdc": "1000000000",
+      "amount_mxn": "18500.00",
+      "payee_ref": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+      "clabe_last4": "7771",
+      "state": "Delivered",
+      "excluded": false,
+      "reason": null,
+      "firms_tried": [
+        "mx1.example.testnet"
+      ],
+      "final_firm": "mx1.example.testnet",
+      "quote_bps": 20,
+      "cutoff_ns": "1794420000000000000",
+      "final_deadline_ns": "1794420300000000000",
+      "delivered_at_ns": "1794419990000000000",
+      "proof_ref": "CEP-SIM-7-0-0001",
+      "oracle_sig": null,
+      "assigned_at_ns": "1794419900000000000",
+      "penalties_total": "0",
+      "txs": {
+        "assign": [
+          "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        ],
+        "settle": [
+          "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+        ]
+      }
+    },
+    {
+      "id": 1,
+      "amount_usdc": "2000000000",
+      "amount_mxn": "37000.00",
+      "payee_ref": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+      "clabe_last4": "9719",
+      "state": "Delivered",
+      "excluded": false,
+      "reason": null,
+      "firms_tried": [
+        "mx3.example.testnet",
+        "mx2.example.testnet"
+      ],
+      "final_firm": "mx2.example.testnet",
+      "quote_bps": 20,
+      "cutoff_ns": "1794420060000000000",
+      "final_deadline_ns": "1794420300000000000",
+      "delivered_at_ns": "1794420050000000000",
+      "proof_ref": "CEP-SIM-7-1-0002",
+      "oracle_sig": null,
+      "assigned_at_ns": "1794419900000000000",
+      "penalties_total": "400000",
+      "txs": {
+        "assign": [
+          "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+        ],
+        "reroute": [
+          "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD"
+        ],
+        "settle": [
+          "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "amount_usdc": "500000000",
+      "amount_mxn": "9250.00",
+      "payee_ref": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+      "clabe_last4": "0004",
+      "state": "Refunded",
+      "excluded": true,
+      "reason": "ACCOUNT_CLOSED",
+      "firms_tried": [
+        "mx2.example.testnet"
+      ],
+      "final_firm": null,
+      "quote_bps": 20,
+      "cutoff_ns": "1794420000000000000",
+      "final_deadline_ns": "1794420300000000000",
+      "delivered_at_ns": null,
+      "proof_ref": null,
+      "oracle_sig": null,
+      "assigned_at_ns": "1794419900000000000",
+      "penalties_total": "0",
+      "txs": {
+        "assign": [
+          "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+        ],
+        "exclude": [
+          "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG"
+        ],
+        "refund": [
+          "HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH"
+        ]
+      }
+    }
+  ],
+  "totals": {
+    "locked": "3508750000",
+    "paid_to_firms": "3006000000",
+    "returned_to_funder": "503150000",
+    "penalties": "400000"
+  },
+  "signature": {
+    "alg": "ed25519",
+    "public_key": "ed25519:J2xccRtuG43drESLYznHhLhQkLTdfepcKYbiQ9BsJVaf",
+    "sig": "RR6FmWCi0dQELeXIzSnY2vIc8u5/gmH39q/P6H3PHHB7lR/2vQUWPurwrJxYc2po77hfaboZNurWGsHHxSBADQ=="
+  }
+}

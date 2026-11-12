@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/AvinashPathare/Relevo/blob/main/docs/receipts/elivo-receipt-1.schema.json",
+  "title": "Elivo payout batch receipt, version elivo-receipt-1",
+  "description": "Testnet prototype. Payout firms and SPEI receipts are simulated. Contract unaudited. A signed record of one funded batch: every payout, the firms that held it, penalties, and transaction hashes. Amounts are USDC base units (6 decimals) as decimal strings.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "label",
+    "network",
+    "escrow",
+    "batch_id",
+    "batch_hash",
+    "funder",
+    "generated_at",
+    "payouts",
+    "totals",
+    "signature"
+  ],
+  "properties": {
+    "version": { "const": "elivo-receipt-1" },
+    "label": { "type": "string", "minLength": 1 },
+    "network": { "enum": ["sandbox", "testnet", "mainnet"] },
+    "escrow": { "$ref": "#/$defs/account" },
+    "batch_id": { "$ref": "#/$defs/uint" },
+    "batch_hash": { "$ref": "#/$defs/hex32" },
+    "funder": { "$ref": "#/$defs/account" },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+    },
+    "payouts": { "type": "array", "items": { "$ref": "#/$defs/payout" } },
+    "totals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locked", "paid_to_firms", "returned_to_funder", "penalties"],
+      "properties": {
+        "locked": { "$ref": "#/$defs/uint" },
+        "paid_to_firms": { "$ref": "#/$defs/uint" },
+        "returned_to_funder": { "$ref": "#/$defs/uint" },
+        "penalties": { "$ref": "#/$defs/uint" }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alg", "public_key", "sig"],
+      "properties": {
+        "alg": { "const": "ed25519" },
+        "public_key": { "type": "string", "pattern": "^ed25519:[1-9A-HJ-NP-Za-km-z]{32,44}$" },
+        "sig": { "type": "string", "pattern": "^[A-Za-z0-9+/]{86}==$" }
+      }
+    }
+  },
+  "$defs": {
+    "uint": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
+    "uintOrNull": { "anyOf": [{ "$ref": "#/$defs/uint" }, { "type": "null" }] },
+    "hex32": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "account": { "type": "string", "pattern": "^[a-z0-9._-]{2,64}$" },
+    "payout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "amount_usdc",
+        "amount_mxn",
+        "payee_ref",
+        "clabe_last4",
+        "state",
+        "excluded",
+        "reason",
+        "firms_tried",
+        "final_firm",
+        "quote_bps",
+        "cutoff_ns",
+        "final_deadline_ns",
+        "delivered_at_ns",
+        "proof_ref",
+        "oracle_sig",
+        "assigned_at_ns",
+        "penalties_total",
+        "txs"
+      ],
+      "properties": {
+        "id": { "type": "integer", "minimum": 0 },
+        "amount_usdc": { "$ref": "#/$defs/uint" },
+        "amount_mxn": {
+          "description": "MXN with 2 decimals; empty when the router had no row for this payout.",
+          "type": "string",
+          "pattern": "^([0-9]+\\.[0-9]{2})?$"
+        },
+        "payee_ref": {
+          "description": "sha256(salt ‖ CLABE), hex. The name and full CLABE never appear in a receipt.",
+          "type": "string",
+          "pattern": "^([0-9a-f]{64})?$"
+        },
+        "clabe_last4": { "type": "string", "pattern": "^([0-9]{4})?$" },
+        "state": { "enum": ["Delivered", "Refunded"] },
+        "excluded": { "type": "boolean" },
+        "reason": { "anyOf": [{ "enum": ["ACCOUNT_CLOSED"] }, { "type": "null" }] },
+        "firms_tried": { "type": "array", "items": { "$ref": "#/$defs/account" } },
+        "final_firm": { "anyOf": [{ "$ref": "#/$defs/account" }, { "type": "null" }] },
+        "quote_bps": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "cutoff_ns": { "$ref": "#/$defs/uint" },
+        "final_deadline_ns": { "$ref": "#/$defs/uint" },
+        "delivered_at_ns": { "$ref": "#/$defs/uintOrNull" },
+        "proof_ref": { "type": ["string", "null"] },
+        "oracle_sig": { "type": ["string", "null"] },
+        "assigned_at_ns": { "$ref": "#/$defs/uintOrNull" },
+        "penalties_total": { "$ref": "#/$defs/uint" },
+        "txs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "assign": { "$ref": "#/$defs/hashes" },
+            "reroute": { "$ref": "#/$defs/hashes" },
+            "settle": { "$ref": "#/$defs/hashes" },
+            "exclude": { "$ref": "#/$defs/hashes" },
+            "refund": { "$ref": "#/$defs/hashes" }
+          }
+        }
+      }
+    },
+    "hashes": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}

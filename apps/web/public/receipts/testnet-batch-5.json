@@ -1,0 +1,188 @@
+{
+  "version": "elivo-receipt-1",
+  "label": "Testnet prototype. Payout firms and SPEI receipts are simulated. Contract unaudited.",
+  "network": "testnet",
+  "escrow": "escrow.pg-1794403941.testnet",
+  "batch_id": "5",
+  "batch_hash": "a85bb5326f1d00c24b1965cb9f6a20c62bcf4d0f42d84aea9c3cacf0086a3922",
+  "funder": "elivo-1794414333.sputnikv2.testnet",
+  "generated_at": "2026-11-11T17:58:18.022Z",
+  "payouts": [
+    {
+      "id": 0,
+      "amount_usdc": "2000000000",
+      "amount_mxn": "37000.00",
+      "payee_ref": "be5ab4ef80a8fe74752818d94d6af7b01728083ac90454611118f337d7a38841",
+      "clabe_last4": "7771",
+      "state": "Delivered",
+      "excluded": false,
+      "reason": null,
+      "firms_tried": [
+        "mx3.pg-1794403941.testnet",
+        "mx2.pg-1794403941.testnet"
+      ],
+      "final_firm": "mx2.pg-1794403941.testnet",
+      "quote_bps": 20,
+      "cutoff_ns": "1794419913194890790",
+      "final_deadline_ns": "1794420051385904682",
+      "delivered_at_ns": "1794419885851545492",
+      "proof_ref": "CEP-SIM-5-0-f39a",
+      "oracle_sig": "nofMEqVLov9yWjMRtn3VcuX5sr7bFO5wevJC+gO5bkd5VAtqUMrcjDKvsg29Alp4XrasSZ+XvQlK1NE28Q+4CQ==",
+      "assigned_at_ns": "1794419751385904682",
+      "penalties_total": "400000",
+      "txs": {
+        "assign": [
+          "7ZMrTDMLxQwuGHa8MtxMEh4SCenXKAdNs3XgpFVq83Sz"
+        ],
+        "reroute": [
+          "E6yYwDQ2J3C7qtFaMLKUgiqzcV1KQDbTjRP6fRj9e5yw"
+        ],
+        "settle": [
+          "3xVfGvAgoaSyVsP7AikGSVf6RcPUXZkwfguoej3Nb3H8"
+        ]
+      }
+    },
+    {
+      "id": 1,
+      "amount_usdc": "2000000000",
+      "amount_mxn": "37000.00",
+      "payee_ref": "dff347bfdf2399dc3c4ca77bc5c1f322c284bffca18951ef7f1630e283c4702a",
+      "clabe_last4": "9719",
+      "state": "Delivered",
+      "excluded": false,
+      "reason": null,
+      "firms_tried": [
+        "mx3.pg-1794403941.testnet",
+        "mx2.pg-1794403941.testnet"
+      ],
+      "final_firm": "mx2.pg-1794403941.testnet",
+      "quote_bps": 20,
+      "cutoff_ns": "1794419916371402048",
+      "final_deadline_ns": "1794420051385904682",
+      "delivered_at_ns": "1794419890212642706",
+      "proof_ref": "CEP-SIM-5-1-8022",
+      "oracle_sig": "myW454/ywtuTScqEBj4QKwCldfROU+r7if2ZKleQ5qmTeWuJiBfnPhehr1WaReiFaQtMdeGqdttVN2/RZ+G4Bg==",
+      "assigned_at_ns": "1794419753576904682",
+      "penalties_total": "400000",
+      "txs": {
+        "assign": [
+          "EwoytsGpASsVtGunvdgJkPEy7arvpwBc2r9RYsEaDHrc"
+        ],
+        "reroute": [
+          "7ZK6xWgKVBZZoq9NY1m8oQxGYCM4WGsK7xCZCCyKfenA"
+        ],
+        "settle": [
+          "7ii2GnE2QESTbdEzRy7weMzkkW1VDw6RjtYQNgfcpf58"
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "amount_usdc": "1500000000",
+      "amount_mxn": "27750.00",
+      "payee_ref": "a905bf76c93e70b1ee6363b11fe6b6a06d69f7e2b16ec71cd6e485cdee53bed7",
+      "clabe_last4": "7899",
+      "state": "Refunded",
+      "excluded": true,
+      "reason": "ACCOUNT_CLOSED",
+      "firms_tried": [
+        "mx2.pg-1794403941.testnet"
+      ],
+      "final_firm": null,
+      "quote_bps": 20,
+      "cutoff_ns": "1794419871385904682",
+      "final_deadline_ns": "1794420051385904682",
+      "delivered_at_ns": null,
+      "proof_ref": null,
+      "oracle_sig": "yTgzjuHsxBB1FP41LiuS7qtzSLREfe4BzaR3OK8AqPdgSSx5uCdSPVYOmtC0G+eCnxcOMthiiJQ50D2NGY4TBw==",
+      "assigned_at_ns": "1794419755393904682",
+      "penalties_total": "0",
+      "txs": {
+        "assign": [
+          "8aM91Q6xWWK4oNjt4ddNQYUPj8BFBTVp4ZLaYwFLwVjE"
+        ],
+        "exclude": [
+          "GyKXiBNrBL7T9w8WiiskeYQuihGBynmt1uJhuUix4W1X"
+        ],
+        "refund": [
+          "ARVbCvHZGmukRtciDJyMTy18985pArnpJP2fCKf3Zke2"
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "amount_usdc": "2500000000",
+      "amount_mxn": "46250.00",
+      "payee_ref": "f8133db143d2b5878bec3a2a60d98725dbbaedce44986dd0aa41d8d8d786f9c7",
+      "clabe_last4": "3213",
+      "state": "Delivered",
+      "excluded": false,
+      "reason": null,
+      "firms_tried": [
+        "mx2.pg-1794403941.testnet"
+      ],
+      "final_firm": "mx2.pg-1794403941.testnet",
+      "quote_bps": 20,
+      "cutoff_ns": "1794419871385904682",
+      "final_deadline_ns": "1794420051385904682",
+      "delivered_at_ns": "1794419763507474063",
+      "proof_ref": "CEP-SIM-5-3-6343",
+      "oracle_sig": "NAlzsrSlMyu8oXeE36H+/5XBApKsX3GdQWstO3OjVBO3xx5CLdUmD1Ls9PjUwFV0DpVx09dFX3z3tQGfdViTCg==",
+      "assigned_at_ns": "1794419757261904682",
+      "penalties_total": "0",
+      "txs": {
+        "assign": [
+          "69ECBSY5iJkPpcoe1UgUeAQYvMC3o7ayUkQ4GbJFfp7D"
+        ],
+        "settle": [
+          "B1KEzopQMw4kGwSbuEF9VS9jdttRujvDFG5wnJs7BMgs"
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "amount_usdc": "1000000000",
+      "amount_mxn": "18500.00",
+      "payee_ref": "15b45a0e71cae7ab852ba5c975945951a4d0c1cd77090831763b2d1f8feb9839",
+      "clabe_last4": "5554",
+      "state": "Delivered",
+      "excluded": false,
+      "reason": null,
+      "firms_tried": [
+        "mx3.pg-1794403941.testnet",
+        "mx2.pg-1794403941.testnet"
+      ],
+      "final_firm": "mx2.pg-1794403941.testnet",
+      "quote_bps": 20,
+      "cutoff_ns": "1794419920212642706",
+      "final_deadline_ns": "1794420051385904682",
+      "delivered_at_ns": "1794419892247006932",
+      "proof_ref": "CEP-SIM-5-4-31d5",
+      "oracle_sig": "tLqNNOCTDxcNmGG50LP1wPlpR67lXR/tyRT9F4PrLwzQbvH9TIaBdeJOaQwawuiYFZIC7kHtyMfuLC6JBHyvCA==",
+      "assigned_at_ns": "1794419759158904682",
+      "penalties_total": "200000",
+      "txs": {
+        "assign": [
+          "2nckGE9NYP2kXhbN2b7VkKTRa1CT3GqXehaynAQdLoU3"
+        ],
+        "reroute": [
+          "CnBG4QSnrd6cVWpaoiqRE3EMxE8S3HeUCEoswDRS98L"
+        ],
+        "settle": [
+          "EcuY4hiAvrzWjk5s5FaCUEjJK5qqGmru9uk6xvvufcbo"
+        ]
+      }
+    }
+  ],
+  "totals": {
+    "locked": "9022500000",
+    "paid_to_firms": "7515000000",
+    "returned_to_funder": "1508500000",
+    "penalties": "1000000"
+  },
+  "signature": {
+    "alg": "ed25519",
+    "public_key": "ed25519:Ep2MGnwH4AM8KPRKc6Yu6fiPSFh5S8e32UJzuBQeFDyS",
+    "sig": "oCp8BiRBRicJoTlwWTVAc5/OC6DEiYS/ae1ylXTTa5qjwY1QPtEMCo4qXYlSPrj8Pwt+1LYw22EtAKcUIgIRCA=="
+  }
+}
