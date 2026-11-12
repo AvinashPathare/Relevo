@@ -1,4 +1,5 @@
 /** One interface for the two ways the DAO steps get signed: a wallet (testnet) or the sandbox demo signer. */
+import { isElivoFundingKind } from "@elivo/shared/funding-kind";
 import type { DaoProposal } from "./dao.ts";
 import { addProposalTx, approveTx, type TxSpec } from "./txs.ts";
 
@@ -43,7 +44,8 @@ export interface WalletPort {
   send(tx: TxSpec): Promise<void>;
 }
 
-export function walletSigner(port: WalletPort, dao: string): Signer {
+export function walletSigner(port: WalletPort, cfg: { dao: string; usdc: string; escrow: string }): Signer {
+  const { dao } = cfg;
   return {
     mode: "wallet",
     accountId: port.accountId(),
@@ -58,6 +60,11 @@ export function walletSigner(port: WalletPort, dao: string): Signer {
       if (p.contractId !== dao) throw new Error("proposal is not for this DAO");
       await port.send(addProposalTx(p));
     },
-    approve: (proposal) => port.send(approveTx(dao, proposal.id, proposal.kind)),
+    approve: async (proposal) => {
+      // Anyone can add a proposal to a Sputnik DAO; never vote on one this app didn't build.
+      if (!isElivoFundingKind(proposal.kind, cfg))
+        throw new Error(`Proposal #${proposal.id} is not this app's funding proposal`);
+      await port.send(approveTx(dao, proposal.id, proposal.kind));
+    },
   };
 }

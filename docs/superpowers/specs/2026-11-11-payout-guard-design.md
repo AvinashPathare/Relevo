@@ -340,7 +340,7 @@ make demo                        # full flow on local sandbox, prints receipt + 
 make demo-testnet                # same on testnet (needs the deployer's keys)
 make test                        # cargo test (unit + proptest + workspaces) + vitest
 pnpm dev                         # web app + router + sims against sandbox (demo signer)
-pnpm dev:testnet                 # same against the testnet deployment (MyNearWallet)
+pnpm dev:testnet                 # same against testnet (MyNearWallet; needs the deployer's keys)
 pnpm web:testnet                 # read-only web app against testnet: /chain/<id>, /firms
 ```
 

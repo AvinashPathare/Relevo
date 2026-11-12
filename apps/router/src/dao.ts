@@ -11,10 +11,15 @@ type View = <T>(contractId: string, method: string, args?: object) => Promise<T>
 
 const WINDOW = 50;
 
+/**
+ * `accept` must vet the proposal's kind: anyone can add a proposal with any description, so the text
+ * alone proves nothing.
+ */
 export async function findProposalForDraft(
   view: View,
   daoId: string,
   draftId: string,
+  accept: (kind: unknown) => boolean = () => true,
 ): Promise<DaoProposal | null> {
   const last = Number(await view<number>(daoId, "get_last_proposal_id"));
   if (last <= 0) return null;
@@ -24,7 +29,7 @@ export async function findProposalForDraft(
     limit: WINDOW,
   });
   const tag = `Elivo payout batch ${draftId}:`;
-  const hit = [...list].reverse().find((p) => p.description.includes(tag));
+  const hit = [...list].reverse().find((p) => p.description.startsWith(tag) && accept(p.kind));
   if (!hit) return null;
   return { id: hit.id, status: hit.status, kind: hit.kind, proposer: hit.proposer, votes: hit.votes ?? {} };
 }

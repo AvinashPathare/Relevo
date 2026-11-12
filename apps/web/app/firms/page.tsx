@@ -3,6 +3,7 @@ import { scoreboardFromFirms } from "@elivo/shared/scoreboard";
 import type { FirmView } from "@elivo/shared/views";
 import { useEffect, useState } from "react";
 import { Scoreboard, type ScoreRow } from "../../components/Scoreboard.tsx";
+import { Eyebrow } from "../../components/ui.tsx";
 import { fetchConfig, firmNames } from "../../lib/config.ts";
 import { viewCall } from "../../lib/rpc.ts";
 
@@ -28,14 +29,17 @@ export default function FirmsPage() {
     })().catch((e) => setError((e as Error).message));
   }, []);
   return (
-    <>
-      <h1>Payout firms</h1>
-      <p className="muted">
-        Simulated firms with real testnet bonds. A late firm is rerouted and pays 1 bp per period late to the
-        DAO, capped at 2%.
-      </p>
+    <div className="stack">
+      <div>
+        <Eyebrow>Payout firms · on-chain record</Eyebrow>
+        <h1 className="page-title">Payout firms</h1>
+        <p className="lede">
+          Simulated firms with real testnet bonds. A late firm is rerouted and pays 1 bp per period late to
+          the DAO, capped at 2%.
+        </p>
+      </div>
       {error && <p className="bad">Could not load: {error}</p>}
       {rows ? <Scoreboard rows={rows} /> : !error && <p className="muted">Loading…</p>}
-    </>
+    </div>
   );
 }

@@ -13,6 +13,7 @@ import { LABEL } from "@elivo/shared/receipt";
 import { createDemoSigner, DEMO_SIGNER_LABEL } from "./lib/demo-signer.ts";
 import { onStop, setLogDir, startCommand, stopAll, waitHealthy } from "./lib/procs.ts";
 import { setupSandbox, setupTestnet, startServices } from "./lib/stack.ts";
+import { nextDevArgs } from "./lib/web-args.ts";
 
 const arg = (k: string) => (process.argv.includes(k) ? process.argv[process.argv.indexOf(k) + 1] : undefined);
 const network = arg("--network") ?? "sandbox";
@@ -20,19 +21,18 @@ const readOnly = process.argv.includes("--read-only");
 const WEB_PORT = Number(process.env.WEB_PORT ?? 3000);
 const SIGNER_PORT = Number(process.env.DEMO_SIGNER_PORT ?? 7430);
 const e = env({ ...process.env, ELIVO_NETWORK: network });
-// Logs and the router store live outside the repo while the web app runs: Turbopack watches the
-// whole workspace, and with a browser connected, writes under .data/ trigger page reloads.
+// Logs and the router store live outside the repo while the web app runs, so the dev server's file
+// watcher never sees the services' writes (see scripts/lib/web-args.ts for the reload loop this avoids).
 const devDir = process.env.ELIVO_DEV_DIR ?? join(tmpdir(), "elivo-dev");
 setLogDir(join(devDir, "logs"));
 
+function required<T>(v: T | undefined, what: string): T {
+  if (v === undefined) throw new Error(`missing ${what}`);
+  return v;
+}
+
 function startWeb(webEnv: Record<string, string>) {
-  startCommand(
-    "web",
-    "pnpm",
-    ["exec", "next", "dev", "--port", String(WEB_PORT)],
-    webEnv,
-    resolve("apps/web"),
-  );
+  startCommand("web", "pnpm", nextDevArgs(WEB_PORT), webEnv, resolve("apps/web"));
   return waitHealthy(`http://127.0.0.1:${WEB_PORT}/api/config`, 120_000);
 }
 
@@ -50,7 +50,10 @@ async function main() {
       `Open http://localhost:${WEB_PORT}/chain/5 (the reference run) or /firms. No keys or router needed.`,
     );
   } else {
-    const s = network === "testnet" ? await setupTestnet() : await setupSandbox();
+    const s =
+      network === "testnet"
+        ? await setupTestnet(console.log, { adjustBonds: false, councilKey: false })
+        : await setupSandbox();
     onStop(s.stop);
     const routerStore = join(
       devDir,
@@ -65,7 +68,7 @@ async function main() {
     };
     if (network === "sandbox") {
       const signer = createDemoSigner({
-        council: s.chain.signer(s.d.council, s.keys.council),
+        council: s.chain.signer(s.d.council, required(s.keys.council, "council key")),
         view: s.chain.view.bind(s.chain),
         d: s.d,
         routerUrl: urls.router,

@@ -46,9 +46,9 @@ it("shows payees, totals, the fixed rate and the timing on success", () => {
       config={cfg}
     />,
   );
-  expect(screen.getByText("Total to lock 9,022.50 USDC")).toBeTruthy();
-  expect(screen.getByText("Payouts 9,000.00 USDC")).toBeTruthy();
-  expect(screen.getByText("Fee buffer (25 bps) 22.50 USDC")).toBeTruthy();
+  expect(screen.getByLabelText("Total to lock 9,022.50 USDC")).toBeTruthy();
+  expect(screen.getByLabelText("Payouts 9,000.00 USDC")).toBeTruthy();
+  expect(screen.getByLabelText("Fee buffer (25 bps) 22.50 USDC")).toBeTruthy();
   expect(screen.getByText("Rate 18.50 MXN/USDC (fixed, simulated)")).toBeTruthy();
   expect(screen.getByText("Cut-off: 40 s after funding (demo) · Final deadline: 300 s")).toBeTruthy();
   expect(screen.getAllByText("****1234")).toHaveLength(5);

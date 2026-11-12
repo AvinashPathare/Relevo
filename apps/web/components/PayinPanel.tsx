@@ -1,6 +1,7 @@
 "use client";
 import { formatUsdc } from "@elivo/shared/money";
 import { useEffect, useState } from "react";
+import { Eyebrow, Sticker } from "./ui.tsx";
 
 export const PAYIN_LABEL =
   "Mainnet price quote from NEAR Intents 1Click, for illustration. Nothing is sent; the demo locks mock USDC on testnet.";
@@ -70,8 +71,9 @@ export function PayinPanel({ totalLockedUnits }: { totalLockedUnits: string }) {
 
   const options = assets.length ? assets : [{ id: asset, symbol: "ETH", chain: "Ethereum" }];
   return (
-    <div className="card">
-      <h3>Pay in from another chain</h3>
+    <Sticker tone="lavender">
+      <Eyebrow>Pay-in quote · NEAR Intents 1Click</Eyebrow>
+      <h3>Fund it from another chain</h3>
       <label>
         Asset{" "}
         <select value={asset} onChange={(e) => setAsset(e.target.value)}>
@@ -85,6 +87,6 @@ export function PayinPanel({ totalLockedUnits }: { totalLockedUnits: string }) {
       ) : (
         <p className="muted">Fetching quote…</p>
       )}
-    </div>
+    </Sticker>
   );
 }

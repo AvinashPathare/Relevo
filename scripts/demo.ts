@@ -28,6 +28,8 @@ async function main() {
   const s = network === "testnet" ? await setupTestnet(note) : await setupSandbox();
   onStop(s.stop);
   const { chain, d, keys } = s;
+  if (!keys.council) throw new Error("the demo signs the DAO vote with the council key, which is missing");
+  const councilKey = keys.council;
   try {
     const { urls } = await startServices(s, network, e);
     say(
@@ -73,7 +75,7 @@ async function main() {
       depositYocto: string;
       kind: object;
     };
-    const council = chain.signer(d.council, keys.council);
+    const council = chain.signer(d.council, councilKey);
     const added = await council.call(d.dao, "add_proposal", p.args, {
       gasTgas: 100,
       depositYocto: BigInt(p.depositYocto),

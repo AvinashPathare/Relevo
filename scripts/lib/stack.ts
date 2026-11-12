@@ -22,7 +22,8 @@ export interface Setup {
     mx1: Ed25519Key;
     mx2: Ed25519Key;
     mx3: Ed25519Key;
-    council: Ed25519Key;
+    /** The council's full-access key: absent in pnpm dev:testnet, where a wallet signs the DAO steps. */
+    council?: Ed25519Key;
   };
   stop: () => Promise<void>;
 }
@@ -33,7 +34,17 @@ export async function setupSandbox(): Promise<Setup> {
   return { chain: s.chain, d: s.deployment, keys: s.keys, stop: s.stop };
 }
 
-export async function setupTestnet(note: (msg: string) => void = console.log): Promise<Setup> {
+/**
+ * Attach to deployments/testnet.json. Needs the deployer's keys (.data/keys and ~/.near-credentials).
+ * `make demo-testnet` resets the firms' bonds and signs the DAO steps with the council key;
+ * `pnpm dev:testnet` passes { adjustBonds: false, councilKey: false } so it changes nothing on-chain
+ * at start-up and the wallet signs.
+ */
+export async function setupTestnet(
+  note: (msg: string) => void = console.log,
+  opts: { adjustBonds?: boolean; councilKey?: boolean } = {},
+): Promise<Setup> {
+  const { adjustBonds = true, councilKey = true } = opts;
   const d = loadDeployment("deployments/testnet.json");
   if (!d.dao) throw new Error("deployments/testnet.json has no dao: run ./scripts/testnet-dao.sh first");
   const chain = new Chain({
@@ -52,7 +63,7 @@ export async function setupTestnet(note: (msg: string) => void = console.log): P
     ["mx2", 250_000_000n],
     ["mx3", 250_000_000n],
   ] as const;
-  for (const [n, target] of targets) {
+  for (const [n, target] of adjustBonds ? targets : []) {
     const id = d.firms[n];
     const bond = BigInt(firms[id].bond);
     const firm = chain.signer(id, cred(id));
@@ -101,7 +112,7 @@ export async function setupTestnet(note: (msg: string) => void = console.log): P
       mx1: k("mx1"),
       mx2: k("mx2"),
       mx3: k("mx3"),
-      council: cred(d.council),
+      council: councilKey ? cred(d.council) : undefined,
     },
     stop: async () => {},
   };

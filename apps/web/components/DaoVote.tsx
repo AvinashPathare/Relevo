@@ -6,7 +6,18 @@ import { demoSigner, type Signer, walletSigner } from "../lib/signer.ts";
 import { ProposeView } from "./ProposeView.tsx";
 
 /** Loads the signer (wallet or demo) and polls the DAO proposal until the batch is funded. */
-export function DaoVote({ draftId, cfg, funded }: { draftId: string; cfg: WebConfig; funded: boolean }) {
+export function DaoVote({
+  draftId,
+  cfg,
+  funded,
+  pollMs,
+}: {
+  draftId: string;
+  cfg: WebConfig;
+  funded: boolean;
+  /** Poll interval override (tests). */
+  pollMs?: number;
+}) {
   const [signer, setSigner] = useState<Signer | null>(null);
   const [wallets, setWallets] = useState<ReadonlyArray<{ id: string; name: string }>>([]);
   const [proposal, setProposal] = useState<DaoProposal | null>(null);
@@ -22,7 +33,7 @@ export function DaoVote({ draftId, cfg, funded }: { draftId: string; cfg: WebCon
     import("../lib/wallet.ts")
       .then(async ({ walletPort, WALLETS }) => {
         setWallets(WALLETS);
-        setSigner(walletSigner(await walletPort(), cfg.dao));
+        setSigner(walletSigner(await walletPort(), cfg));
       })
       .catch((e) => setError(`wallet: ${(e as Error).message}`));
   }, [cfg]);
@@ -36,19 +47,20 @@ export function DaoVote({ draftId, cfg, funded }: { draftId: string; cfg: WebCon
         if (!stop) {
           setProposal(r.proposal);
           setCouncil(r.council);
+          setError(null);
         }
       } catch (e) {
         if (!stop) setError((e as Error).message);
       }
       // Once funded, one read is enough (it names the approved proposal); before that, keep polling.
-      if (!stop && !funded) timer = setTimeout(poll, cfg.network === "testnet" ? 5_000 : 2_000);
+      if (!stop && !funded) timer = setTimeout(poll, pollMs ?? (cfg.network === "testnet" ? 5_000 : 2_000));
     };
     poll();
     return () => {
       stop = true;
       if (timer) clearTimeout(timer);
     };
-  }, [draftId, funded, cfg.network, tick]);
+  }, [draftId, funded, cfg.network, tick, pollMs]);
 
   if (error) return <p className="bad">{error}</p>;
   if (!signer) return <p className="muted">Loading signer…</p>;
