@@ -1,7 +1,9 @@
 const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 export function b58encode(bytes: Uint8Array): string {
-  let n = BigInt(`0x${Buffer.from(bytes).toString("hex") || "0"}`);
+  let hexStr = "";
+  for (const b of bytes) hexStr += b.toString(16).padStart(2, "0");
+  let n = BigInt(`0x${hexStr || "0"}`);
   let s = "";
   while (n > 0n) {
     s = ALPHABET[Number(n % 58n)] + s;
@@ -23,7 +25,8 @@ export function b58decode(s: string): Uint8Array {
   }
   let hex = n === 0n ? "" : n.toString(16);
   if (hex.length % 2) hex = `0${hex}`;
-  const body = Buffer.from(hex, "hex");
+  const body = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < body.length; i++) body[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);
   let zeros = 0;
   while (s[zeros] === "1") zeros++;
   return Uint8Array.from([...new Uint8Array(zeros), ...body]);
