@@ -1,0 +1,30 @@
+{
+  "name": "elivo-payout-guard",
+  "private": true,
+  "type": "module",
+  "description": "Testnet prototype. Payout firms and SPEI receipts are simulated. Contract unaudited.",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.30.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "setup": "node scripts/fetch-sputnik.mjs && node scripts/gen-keys.mjs oracle receipt router-fc mx1 mx2 mx3 council",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --project unit",
+    "test:e2e": "vitest run --project e2e",
+    "verify-receipt": "tsx packages/shared/src/bin/verify-receipt.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.6",
+    "@types/node": "26.6.6",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
+  },
+  "dependencies": {
+    "@elivo/shared": "workspace:*"
+  }
+}

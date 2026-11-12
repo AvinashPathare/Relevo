@@ -1,0 +1,15 @@
+{
+  "name": "@elivo/firm-sim",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@elivo/shared": "workspace:*",
+    "fastify": "5.12.8"
+  },
+  "exports": {
+    "./*": "./src/*.ts"
+  }
+}

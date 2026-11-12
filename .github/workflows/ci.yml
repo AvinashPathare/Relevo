@@ -26,3 +26,23 @@ jobs:
         run: make sputnik && cargo test --workspace
       - name: Rebuild wasm from source and test again
         run: make test-contracts
+
+  services:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Fetch Sputnik DAO wasm (hash-checked)
+        run: node scripts/fetch-sputnik.mjs
+      - name: End-to-end on a local sandbox
+        run: pnpm test:e2e
+      - name: make demo (local sandbox, self-checking)
+        run: make demo
