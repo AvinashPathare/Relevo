@@ -187,6 +187,8 @@ What is new: intent networks already guarantee crypto delivery. This applies the
 
 ## Roadmap
 
+What stands between this prototype and production, what to improve next, and where the project could go: [docs/production-readiness.md](docs/production-readiness.md). In short:
+
 - Real payout-firm adapters in place of the simulators, and a bank-side proof source in place of the simulated oracle.
 - A custodian-held second release key.
 - Sealed commit-reveal quotes; the full set of exclusion reason codes (bank outage, rejection, wrong details).
