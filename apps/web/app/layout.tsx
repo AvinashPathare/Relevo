@@ -5,27 +5,19 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Banner } from "../components/Banner.tsx";
 import { Logo } from "../components/Logo.tsx";
+import { deployment, navLinks, routerAvailable } from "../lib/deployment.ts";
 import "./globals.css";
+
+/** Read the deployment and router settings per request, not once at build time. */
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Relevo Payout Guard",
   description: "Testnet prototype. Payout firms and SPEI receipts are simulated. Contract unaudited.",
 };
 
-/** Network from the deployment the dev server was started with (server-side env; no file reads). */
-function network(): string | null {
-  try {
-    return (
-      (JSON.parse(process.env.ELIVO_DEPLOYMENT_JSON ?? "null") as { network?: string } | null)?.network ??
-      null
-    );
-  } catch {
-    return null;
-  }
-}
-
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const net = network();
+  const net = deployment().network;
   return (
     <html lang="en">
       <body>
@@ -37,9 +29,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <span>Payout Guard</span>
             </a>
             <div className="nav-links">
-              <a href="/new">New batch</a>
-              <a href="/firms">Firms</a>
-              <a href="/verify">Verify</a>
+              {navLinks(routerAvailable()).map((l) => (
+                <a key={l.href} href={l.href}>
+                  {l.label}
+                </a>
+              ))}
             </div>
             {net && <span className="net">{net}</span>}
           </nav>

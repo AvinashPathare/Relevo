@@ -99,6 +99,15 @@ The public key always comes from the chain (`--chain`) or from you (`--pubkey`),
 
 While the web app runs, logs go to the temp folder `pnpm dev` prints, not to `.data/logs`, because writes inside the repo would make the dev server reload the page.
 
+## Public read-only site
+
+With no settings at all, the web app runs as a read-only site for the testnet deployment: `/chain/5` (the reference run), `/firms` and `/verify`. There is no router, no signer and no keys. "New batch" is hidden, and `/rpc` only forwards view calls on the escrow.
+
+- **Vercel:** import the GitHub repo, set **Root Directory** to `apps/web`, and deploy. No environment variables are needed.
+- **Any Node host** (Railway, Render, a VM): run `pnpm install`, then `pnpm --filter @elivo/web build`, then `pnpm --filter @elivo/web start:public`. It listens on `$PORT`.
+
+To point it at another deployment, set `ELIVO_DEPLOYMENT_JSON` (the deployment file's contents) and optionally `NEAR_RPC_URL`.
+
 ## Run the tests
 
 ```bash

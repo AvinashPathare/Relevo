@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const saved = { ...process.env };
@@ -33,15 +34,46 @@ describe("next.config rewrites", () => {
 
 describe("/rpc handler", () => {
   const req = (body: object) => new Request("http://x/rpc", { method: "POST", body: JSON.stringify(body) });
+  const TESTNET = JSON.parse(readFileSync("deployments/testnet.json", "utf8"));
+  const view = (account_id: string) => ({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "query",
+    params: {
+      request_type: "call_function",
+      finality: "final",
+      account_id,
+      method_name: "get_config",
+      args_base64: "e30=",
+    },
+  });
+
+  it("reads only this app's escrow, so a public site is not a free RPC proxy", async () => {
+    delete process.env.ELIVO_DEPLOYMENT_JSON;
+    process.env.NEAR_RPC_URL = "http://127.0.0.1:3030";
+    const f = vi.fn();
+    vi.stubGlobal("fetch", f);
+    const { POST } = await import("../app/rpc/route.ts");
+    expect((await POST(req(view("usdc.tether-token.near")))).status).toBe(403);
+    expect(f).not.toHaveBeenCalled();
+  });
+
+  it("with nothing configured, forwards to the public testnet RPC", async () => {
+    delete process.env.ELIVO_DEPLOYMENT_JSON;
+    delete process.env.NEAR_RPC_URL;
+    const f = vi.fn(async () => Response.json({ result: { result: [] } }));
+    vi.stubGlobal("fetch", f);
+    const { POST } = await import("../app/rpc/route.ts");
+    expect((await POST(req(view(TESTNET.escrow)))).status).toBe(200);
+    expect((f.mock.calls[0] as unknown[])[0]).toBe(TESTNET.rpcUrl);
+  });
 
   it("forwards view calls to the NEAR RPC", async () => {
     process.env.NEAR_RPC_URL = "http://127.0.0.1:3030";
     const f = vi.fn(async () => Response.json({ result: { result: [] } }));
     vi.stubGlobal("fetch", f);
     const { POST } = await import("../app/rpc/route.ts");
-    const r = await POST(
-      req({ jsonrpc: "2.0", id: 1, method: "query", params: { request_type: "call_function" } }),
-    );
+    const r = await POST(req(view(TESTNET.escrow)));
     expect(r.status).toBe(200);
     expect(f).toHaveBeenCalledOnce();
     expect((f.mock.calls[0] as unknown[])[0]).toBe("http://127.0.0.1:3030");

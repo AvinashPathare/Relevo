@@ -1,13 +1,15 @@
 /**
- * /rpc: forwards read-only contract view calls to the NEAR RPC. Anything else (transactions,
- * sandbox_* state patches, other queries) is refused, so the web server is not an open RPC proxy.
+ * /rpc: forwards read-only view calls on this app's escrow to the NEAR RPC. Anything else (other
+ * contracts, transactions, sandbox_* state patches, other queries) is refused, so a public site is not
+ * an open RPC proxy.
  */
+import { deployment, rpcUrl } from "../../lib/deployment.ts";
+
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request): Promise<Response> {
-  const target = process.env.NEAR_RPC_URL;
-  if (!target) return Response.json({ error: "rpc not configured" }, { status: 503 });
-  let body: { method?: unknown; params?: { request_type?: unknown } };
+  const target = rpcUrl();
+  let body: { method?: unknown; params?: { request_type?: unknown; account_id?: unknown } };
   try {
     body = await req.json();
   } catch {
@@ -15,6 +17,8 @@ export async function POST(req: Request): Promise<Response> {
   }
   if (body?.method !== "query" || body.params?.request_type !== "call_function")
     return Response.json({ error: "only contract view calls are allowed" }, { status: 403 });
+  if (body.params.account_id !== deployment().escrow)
+    return Response.json({ error: "only this app's escrow can be read" }, { status: 403 });
   const r = await fetch(target, {
     method: "POST",
     headers: { "content-type": "application/json" },

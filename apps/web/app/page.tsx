@@ -1,15 +1,9 @@
 import { Button, Chip, Eyebrow, Sticker, Ticket } from "../components/ui.tsx";
-
-function finishedBatchHref(): string {
-  try {
-    const d = JSON.parse(process.env.ELIVO_DEPLOYMENT_JSON ?? "null") as { network?: string } | null;
-    return d?.network === "testnet" ? "/chain/5" : "/firms";
-  } catch {
-    return "/firms";
-  }
-}
+import { deployment, routerAvailable } from "../lib/deployment.ts";
 
 export default function Home() {
+  const testnet = deployment().network === "testnet";
+  const withRouter = routerAvailable();
   return (
     <>
       <section className="sheet hero">
@@ -25,10 +19,21 @@ export default function Home() {
           This demo's funder is a DAO. The same receipt works for anyone who has to prove a payout arrived.
         </p>
         <div className="row">
-          <Button href="/new">Start a batch →</Button>
-          <Button href={finishedBatchHref()} variant="secondary">
-            See a finished batch
-          </Button>
+          {withRouter ? (
+            <>
+              <Button href="/new">Start a batch →</Button>
+              <Button href={testnet ? "/chain/5" : "/firms"} variant="secondary">
+                See a finished batch
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button href="/chain/5">See the reference run →</Button>
+              <Button href="/verify" variant="secondary">
+                Verify its receipt
+              </Button>
+            </>
+          )}
         </div>
 
         <div className="hero-stickers">

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterEach, expect, it } from "vitest";
 import { GET } from "../app/api/config/route.ts";
 
@@ -30,7 +31,19 @@ it("serves the deployment from ELIVO_DEPLOYMENT_JSON without touching the filesy
   });
 });
 
-it("is 503 when the deployment is not configured", async () => {
+it("with nothing configured, serves the public testnet deployment, read-only", async () => {
   delete process.env.ELIVO_DEPLOYMENT_JSON;
-  expect(GET().status).toBe(503);
+  delete process.env.ROUTER_URL;
+  delete process.env.DEMO_SIGNER_URL;
+  delete process.env.NEAR_RPC_URL;
+  const r = GET();
+  expect(r.status).toBe(200);
+  const file = JSON.parse(readFileSync("deployments/testnet.json", "utf8"));
+  expect(await r.json()).toMatchObject({
+    network: "testnet",
+    escrow: file.escrow,
+    signer: "wallet",
+    routerAvailable: false,
+    rpcUrl: file.rpcUrl,
+  });
 });
