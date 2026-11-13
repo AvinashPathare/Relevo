@@ -90,6 +90,33 @@ describe("VerifyView", () => {
     expect(screen.queryByRole("button", { name: /testnet reference receipt/ })).toBeNull();
   });
 
+  it("drops the verdict and the CSV as soon as the text changes", async () => {
+    render(<VerifyView app={app} verify={async () => passing} save={() => {}} />);
+    paste(files["valid.json"]);
+    await screen.findByText("Verified against the chain");
+    fireEvent.change(screen.getByLabelText("Receipt JSON"), {
+      target: { value: files["edited-amount.json"] },
+    });
+    expect(screen.queryByText("Verified against the chain")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Download CSV" })).toBeNull();
+  });
+
+  it("ignores a check that finishes after the text was changed", async () => {
+    let release: (o: VerifyOutcome) => void = () => {};
+    const verify = vi.fn(() => new Promise<VerifyOutcome>((r) => (release = r)));
+    render(<VerifyView app={app} verify={verify} save={() => {}} />);
+    paste(files["valid.json"]);
+    await waitFor(() => expect(verify).toHaveBeenCalledOnce());
+    fireEvent.change(screen.getByLabelText("Receipt JSON"), {
+      target: { value: files["edited-amount.json"] },
+    });
+    release(passing);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByText("Verified against the chain")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Download CSV" })).toBeNull();
+    expect((screen.getByRole("button", { name: "Verify" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
   it("carries the testnet label", () => {
     render(<VerifyView app={app} verify={async () => passing} save={() => {}} />);
     expect(

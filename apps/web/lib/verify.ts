@@ -34,7 +34,9 @@ function parse(input: string): Receipt | null {
       /^\d{1,20}$/.test(r.batch_id) &&
       Array.isArray(r.payouts) &&
       !!r.totals &&
-      typeof r.totals === "object";
+      typeof r.totals === "object" &&
+      !!r.signature &&
+      typeof r.signature === "object";
     return shaped ? r : null;
   } catch {
     return null;

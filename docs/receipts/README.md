@@ -15,7 +15,7 @@ A real anchored receipt from the testnet reference run (batch 5) is at [`apps/we
 
 ## Fields
 
-- **Amounts:** USDC base units (6 decimals) as decimal strings: `"1000000000"` is 1,000 USDC. `amount_mxn` has 2 decimals.
+- **Amounts:** USDC base units (6 decimals) as decimal strings: `"1000000000"` is 1,000 USDC. `amount_mxn` is the MXN amount exactly as written in the payee CSV (0 to 2 decimals, e.g. `37000` or `37000.50`), or empty if the router had no row for the payout.
 - **Times:** `*_ns` fields are NEAR block times in nanoseconds since the Unix epoch, as strings.
 - **Payees:** never named. `payee_ref` is `sha256(salt ‖ CLABE)` in hex, and `clabe_last4` is the last 4 digits. The salt stays with the operator.
 - **State:** `Delivered`, or `Refunded` (`excluded: true` with a `reason` such as `ACCOUNT_CLOSED` means the account was closed and no penalty applies).

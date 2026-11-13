@@ -83,9 +83,18 @@ describe("verifyAgainstChain", () => {
     }
   });
 
-  it("fails the signature for an unsigned file", async () => {
-    const r = await verifyAgainstChain(files["unsigned.json"], app, chain().view);
-    expect(byId(r).signature).toMatchObject({ ok: false, detail: "No valid signature in the file" });
+  it("reports an unsigned file as not a receipt, without reading the chain", async () => {
+    const c = chain();
+    const r = await verifyAgainstChain(files["unsigned.json"], app, c.view);
+    expect(r.checks).toEqual([{ id: "format", ok: false, detail: "Not an elivo-receipt-1 file" }]);
+    expect(c.calls).toHaveLength(0);
+  });
+
+  it("fails a network-only mismatch (same escrow name, other network) before reading the chain", async () => {
+    const c = chain();
+    const r = await verifyAgainstChain(VALID, { ...app, network: "sandbox" }, c.view);
+    expect(byId(r).escrow.ok).toBe(false);
+    expect(c.calls).toHaveLength(0);
   });
 
   it("fails the anchor while the escrow has no receipt hash yet", async () => {

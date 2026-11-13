@@ -2,7 +2,7 @@
 import { LABEL } from "@elivo/shared/label";
 import { formatUsdc } from "@elivo/shared/money";
 import { receiptToCsv } from "@elivo/shared/receipt-csv";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { type CheckId, type VerifyOutcome, verifyAgainstChain } from "../lib/verify.ts";
 import { Button, Chip, Eyebrow, Sticker, Ticket, Window } from "./ui.tsx";
 
@@ -38,18 +38,29 @@ export function VerifyView({ app, verify, save = saveFile }: VerifyViewProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const check = verify ?? ((input: string) => verifyAgainstChain(input, app));
+  /** Bumped by every new check and every edit: a result only shows if its run is still the latest. */
+  const runId = useRef(0);
 
-  const run = async (input: string) => {
+  /** A verdict belongs to the exact text it checked; any change drops it (and any check in flight). */
+  const edit = (input: string) => {
+    runId.current++;
     setText(input);
     setOutcome(null);
     setError(null);
+    setBusy(false);
+  };
+
+  const run = async (input: string) => {
+    edit(input);
+    const id = runId.current;
     setBusy(true);
     try {
-      setOutcome(await check(input));
+      const o = await check(input);
+      if (id === runId.current) setOutcome(o);
     } catch (e) {
-      setError((e as Error).message);
+      if (id === runId.current) setError((e as Error).message);
     } finally {
-      setBusy(false);
+      if (id === runId.current) setBusy(false);
     }
   };
 
@@ -79,6 +90,7 @@ export function VerifyView({ app, verify, save = saveFile }: VerifyViewProps) {
             <input
               type="file"
               accept=".json,application/json"
+              disabled={busy}
               onChange={async (e) => {
                 const f = e.target.files?.[0];
                 if (f) await run(await f.text());
@@ -89,7 +101,7 @@ export function VerifyView({ app, verify, save = saveFile }: VerifyViewProps) {
         <textarea
           aria-label="Receipt JSON"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => edit(e.target.value)}
           placeholder="or paste the receipt JSON here"
         />
         <div style={{ marginTop: 12 }}>

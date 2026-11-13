@@ -145,3 +145,45 @@ describe("buildReceiptBody isolation", () => {
     expect(JSON.stringify(b)).toBe(before);
   });
 });
+
+describe("receipts the router builds match the published schema", () => {
+  it("accepts MXN amounts with 0, 1 or 2 decimals, and a payout with no router row", async () => {
+    const { Ajv2020 } = await import("ajv/dist/2020.js");
+    const { keyFromSeed } = await import("@elivo/shared/keys");
+    const { signReceipt } = await import("@elivo/shared/receipt");
+    const schema = JSON.parse(
+      readFileSync(new URL("../../../docs/receipts/elivo-receipt-1.schema.json", import.meta.url), "utf8"),
+    );
+    const validate = new Ajv2020({ allErrors: true, strict: true }).compile(schema);
+    const text = [
+      "name,clabe,amount_mxn",
+      "Lucía Fernández,002010077777777771,37000",
+      "Mateo Ríos,032180000118359719,37000.5",
+    ].join("\n");
+    const d = validateCsv(text, "18.50", () => new Uint8Array(32).fill(1)).draft!;
+    const p = (id: number): PayoutView => ({
+      ...base,
+      batch_id: "4",
+      id,
+      amount: "2000000000",
+      locked: "2005000000",
+      state: "Refunded",
+      firm: null,
+      quote_bps: 20,
+      penalties_total: "0",
+      firms_tried: [],
+      excluded: false,
+    });
+    // payout 2 has no row in the draft: the router writes empty strings for its payee fields
+    const body = buildReceiptBody(
+      d,
+      { ...batch, batch_hash: d.batch_hash },
+      [p(0), p(1), p(2)],
+      "testnet",
+      "escrow.test.near",
+    );
+    expect(body.payouts.map((x) => x.amount_mxn)).toEqual(["37000", "37000.5", ""]);
+    const signed = signReceipt(body, keyFromSeed(new Uint8Array(32).fill(5)));
+    expect(validate(signed), JSON.stringify(validate.errors)).toBe(true);
+  });
+});

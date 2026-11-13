@@ -86,9 +86,9 @@
         "id": { "type": "integer", "minimum": 0 },
         "amount_usdc": { "$ref": "#/$defs/uint" },
         "amount_mxn": {
-          "description": "MXN with 2 decimals; empty when the router had no row for this payout.",
+          "description": "MXN as written in the payee CSV (0 to 2 decimals); empty when the router had no row for this payout.",
           "type": "string",
-          "pattern": "^([0-9]+\\.[0-9]{2})?$"
+          "pattern": "^([0-9]+(\\.[0-9]{1,2})?)?$"
         },
         "payee_ref": {
           "description": "sha256(salt ‖ CLABE), hex. The name and full CLABE never appear in a receipt.",
