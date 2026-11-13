@@ -15,6 +15,7 @@ A DAO votes once to pay a batch of contributors in Mexico. The USDC locks in a N
 | Sputnik DAO v2 vote that funds the batch | Real DAO from the official testnet factory (`sputnikv2.testnet`) |
 | Router: quotes, assignment, reroute, settle, refund, receipt anchoring (`apps/router`) | Real service. It signs only with a function-call key limited to six escrow methods. |
 | Signed receipts and `verify-receipt` | Real ed25519 signatures over RFC 8785 canonical JSON. The hash is anchored on-chain. |
+| Receipt format, `/verify` and CSV export | Real. The format is published as a JSON Schema with test vectors ([`docs/receipts`](docs/receipts/)). `/verify` checks a receipt against the chain in the browser and exports it as CSV once every check passes. |
 | CSV import with CLABE check-digit validation | Real |
 | Web app (`apps/web`, Next.js) | Real. Payout state comes from the escrow's view methods; the router only adds payee names (last 4 digits of the account) and tx links. |
 | Pay-in quote from ETH, BTC, SOL or Base USDC | **Real mainnet quote** from the NEAR Intents 1Click API (dry quote), shown for illustration. Nothing is sent. |
@@ -59,6 +60,8 @@ pnpm verify-receipt .data/receipts/<file>.json --chain --rpc <rpc-url> --escrow 
 pnpm verify-receipt .data/receipts/<file>.json --pubkey ed25519:<receipt-key>
 ```
 
+Or in the browser: `pnpm web:testnet`, then open http://localhost:3000/verify and verify the reference receipt (batch 5) against testnet.
+
 The public key always comes from the chain (`--chain`) or from you (`--pubkey`), never from the file itself.
 
 **On testnet:** `make demo-testnet` runs the same flow against the deployment below. It needs the deployer's keys in `~/.near-credentials`, so it can only be run by whoever created the deployment. To create your own deployment, run `make deploy-testnet` and then `./scripts/testnet-dao.sh`; both use faucet-funded accounts.
@@ -73,6 +76,14 @@ The public key always comes from the chain (`--chain`) or from you (`--pubkey`),
    - On the sandbox, a **demo signer** labelled "Demo signer: local sandbox keys, not a wallet" signs with the local council key. It only signs this app's funding proposal.
    - On testnet (`pnpm dev:testnet`), the DAO steps are signed with MyNearWallet: anyone can create the proposal, and only a council member can approve it. Like `make demo-testnet`, this runs the router with the deployer's keys, so only whoever created the deployment can run it. It changes nothing on-chain at start-up. Without those keys, use `pnpm web:testnet` (read-only).
 4. **Live status**: each payout's state, route (e.g. MX-3 → MX-2), the penalty paid to the DAO, the proof reference and tx links. When the batch completes it shows the anchored receipt hash, a receipt download and the `verify-receipt` command.
+
+5. **Verify** (`/verify`): upload or paste a receipt, or on testnet load the reference receipt for batch 5. Your browser runs four checks and shows the result of each:
+   - the receipt belongs to this app's escrow and network;
+   - it is signed by the batch's receipt key, read from the chain;
+   - its hash matches the hash anchored on-chain;
+   - its totals add up from its rows.
+
+   Once every check passes, the payouts download as a CSV for accounting tools. The format, schema and test vectors are in [`docs/receipts`](docs/receipts/).
 
 `/chain/<batch id>` shows any funded batch straight from the contract, with no router, and `/firms` shows each firm's bond, on-time record, penalties and volume. Payout state always comes from the chain, so a reload shows the same state. If the router goes down, a batch page keeps showing the on-chain state it already knows, and says the router is offline.
 

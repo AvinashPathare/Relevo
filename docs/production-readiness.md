@@ -77,9 +77,12 @@ Production needs:
 
 ### 6. Receipts and audit
 
-- A published, versioned receipt format with a JSON Schema, and test vectors in more than one language.
-- Receipt key rotation with the key history on-chain (each batch already snapshots `receipt_pk`).
-- Long-term storage of signed receipts, and an auditor view that verifies a receipt against the chain without running the repo.
+Built: the `elivo-receipt-1` format is published as a JSON Schema with test vectors ([`docs/receipts`](receipts/)). The web app's `/verify` page checks a receipt against the chain in the browser, without the repo, and exports it as CSV.
+
+Still needed:
+- test vectors checked by verifiers in more than one language;
+- receipt key rotation with the key history on-chain (each batch already snapshots `receipt_pk`);
+- long-term storage of signed receipts, and a hosted auditor view that doesn't need a local web app.
 
 ### 7. Testing and delivery
 
@@ -126,7 +129,7 @@ Directions the design already points to, roughly in order:
 - **More payout corridors.** The escrow, bond and penalty pattern doesn't depend on SPEI. Other instant-payment rails could plug in through the same firm and proof interfaces, each with its own proof source.
 - **Recurring and streaming payroll.** DAO contributors are often paid monthly, so one vote could approve a schedule rather than a single batch.
 - **DAO-native operations.** The DAO would own the escrow configuration and firm approvals through proposals, and other DAO frameworks would be supported beyond Sputnik.
-- **Receipts as accounting records.** Signed receipts exported in formats accountants and auditors already use, and verifiable without trusting the operator.
+- **Receipts as accounting records.** First step built: `/verify` checks a receipt against the chain in the browser and exports it as CSV. Next: exports in the formats accounting systems import directly, and a hosted auditor view.
 - **An open delivery-proof standard.** A shared format for "this fiat payment was delivered", so other projects can reuse the same verification, bonding and penalty mechanics for the fiat last mile.
 
-None of this is built yet; it is listed so the direction is clear.
+Apart from the first step on receipts noted above, none of this is built yet; it is listed so the direction is clear.
