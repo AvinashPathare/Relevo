@@ -39,8 +39,16 @@ export async function verifyReceiptWeb(r: unknown, expectedPk: string): Promise<
   if (!raw || !sig || sig.length !== 64) return { ok: false, reason: "malformed" };
   const { signature: _s, ...body } = rec;
   try {
-    const key = await crypto.subtle.importKey("raw", raw, { name: "Ed25519" }, false, ["verify"]);
-    const ok = await crypto.subtle.verify({ name: "Ed25519" }, key, sig, canonicalBytes(body));
+    // Copies into plain ArrayBuffers, the type WebCrypto's BufferSource accepts.
+    const key = await crypto.subtle.importKey("raw", new Uint8Array(raw), { name: "Ed25519" }, false, [
+      "verify",
+    ]);
+    const ok = await crypto.subtle.verify(
+      { name: "Ed25519" },
+      key,
+      new Uint8Array(sig),
+      canonicalBytes(body),
+    );
     return ok ? { ok: true } : { ok: false, reason: "bad_signature" };
   } catch {
     return { ok: false, reason: "malformed" };

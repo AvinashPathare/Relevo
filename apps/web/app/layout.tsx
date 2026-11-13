@@ -53,6 +53,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <div className="nav-links">
               <a href="/new">New batch</a>
               <a href="/firms">Firms</a>
+              <a href="/verify">Verify</a>
             </div>
             {net && <span className="net">{net}</span>}
           </nav>

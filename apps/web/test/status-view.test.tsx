@@ -63,3 +63,8 @@ it("shows a clear message for a batch that does not exist", () => {
   );
   expect(screen.getByText("No batch 99 on escrow.t")).toBeTruthy();
 });
+
+it("links the receipt card to the in-browser verifier", () => {
+  render(<StatusView model={buildStatus(views(), overlay, FIRMS)} routerOnline {...base} />);
+  expect(screen.getByRole("link", { name: "Verify in your browser" }).getAttribute("href")).toBe("/verify");
+});

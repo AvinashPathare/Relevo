@@ -174,6 +174,9 @@ export function StatusView({
             </Button>
           </p>
         )}
+        <p>
+          <a href="/verify">Verify in your browser</a>, or from the command line:
+        </p>
         <pre>{`Verify it yourself: pnpm verify-receipt <file> --chain --rpc ${rpc} --escrow ${escrow}`}</pre>
       </Sticker>
     </div>
