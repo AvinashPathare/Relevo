@@ -21,6 +21,9 @@ export default function Home() {
           cut-off is rerouted and its bond pays a penalty to the DAO. Every batch ends in a signed receipt
           whose hash is anchored on-chain, so anyone can check what happened.
         </p>
+        <p className="muted">
+          This demo's funder is a DAO. The same receipt works for anyone who has to prove a payout arrived.
+        </p>
         <div className="row">
           <Button href="/new">Start a batch →</Button>
           <Button href={finishedBatchHref()} variant="secondary">
@@ -125,6 +128,38 @@ export default function Home() {
             </p>
           </Sticker>
         </ol>
+      </section>
+
+      <section className="band">
+        <Eyebrow>Who it's for</Eyebrow>
+        <h2>Anyone who has to prove a payout arrived.</h2>
+        <ol className="steps-band">
+          <Sticker as="li" tone="mint">
+            <Eyebrow>Receipts first</Eyebrow>
+            <h3>Grant and aid programmes</h3>
+            <p className="muted small">
+              Show donors which payouts were delivered, with a report they can check against the chain.
+            </p>
+          </Sticker>
+          <Sticker as="li" tone="peach">
+            <Eyebrow>Receipts first</Eyebrow>
+            <h3>Payroll and contractor platforms</h3>
+            <p className="muted small">
+              Settle "I wasn't paid" with a per-payout proof, and hand auditors a CSV that verifies.
+            </p>
+          </Sticker>
+          <Sticker as="li" tone="lavender">
+            <Eyebrow>Then bonded delivery</Eyebrow>
+            <h3>Payout providers</h3>
+            <p className="muted small">
+              Post a bond, deliver on time, and build an on-chain record that wins the next batch.
+            </p>
+          </Sticker>
+        </ol>
+        <p className="muted small">
+          Built and tested today for the DAO case only. <a href="/verify">Verify a receipt</a> to see the
+          report.
+        </p>
       </section>
     </>
   );

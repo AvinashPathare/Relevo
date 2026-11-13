@@ -7,6 +7,14 @@
 
 A DAO votes once to pay a batch of contributors in Mexico. The USDC locks in a NEAR escrow, and bonded payout firms deliver. A late firm is rerouted automatically and its bond pays a penalty to the DAO. Every payout ends in a signed receipt, whose hash is anchored on-chain.
 
+**Who it's for.** The demo's funder is a DAO, and that is the only case built and tested. The same pattern fits anyone who has to prove a payout arrived:
+
+- **Grant and aid programmes:** show donors which payouts were delivered, with a report they can check against the chain.
+- **Payroll and contractor platforms:** settle "I wasn't paid" with a per-payout proof, and give auditors a CSV that verifies.
+- **Payout providers:** post a bond, deliver on time, and build an on-chain delivery record.
+
+The receipt comes first; the escrow and bonds are the stronger level on top of it (see the product ladder in [docs/production-readiness.md](docs/production-readiness.md)).
+
 ## What is real and what is simulated
 
 | Part | Status |
@@ -83,7 +91,7 @@ The public key always comes from the chain (`--chain`) or from you (`--pubkey`),
    - its hash matches the hash anchored on-chain;
    - its totals add up from its rows.
 
-   Once every check passes, the payouts download as a CSV for accounting tools. The format, schema and test vectors are in [`docs/receipts`](docs/receipts/).
+   Once every check passes, the page shows a printable delivery report (for a donor or auditor), and the payouts download as a CSV for accounting tools. The format, schema and test vectors are in [`docs/receipts`](docs/receipts/).
 
 `/chain/<batch id>` shows any funded batch straight from the contract, with no router, and `/firms` shows each firm's bond, on-time record, penalties and volume. Payout state always comes from the chain, so a reload shows the same state. If the router goes down, a batch page keeps showing the on-chain state it already knows, and says the router is offline.
 

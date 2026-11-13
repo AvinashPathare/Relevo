@@ -793,3 +793,22 @@ input[type="file"] {
     transition: none;
   }
 }
+
+/* Printing /verify gives the delivery report alone, on white. */
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+  .nav-wrap,
+  .footer,
+  .no-print,
+  body *:not(.report):not(.report *):not(:has(.report)) {
+    display: none !important;
+  }
+  .report {
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+}

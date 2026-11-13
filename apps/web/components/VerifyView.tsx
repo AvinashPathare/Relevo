@@ -4,6 +4,7 @@ import { formatUsdc } from "@elivo/shared/money";
 import { receiptToCsv } from "@elivo/shared/receipt-csv";
 import { useRef, useState } from "react";
 import { type CheckId, type VerifyOutcome, verifyAgainstChain } from "../lib/verify.ts";
+import { DeliveryReport } from "./DeliveryReport.tsx";
 import { Button, Chip, Eyebrow, Sticker, Ticket, Window } from "./ui.tsx";
 
 const CHECK_NAME: Record<CheckId, string> = {
@@ -30,9 +31,10 @@ export interface VerifyViewProps {
   /** Injectable for tests. */
   verify?: (input: string) => Promise<VerifyOutcome>;
   save?: (name: string, text: string) => void;
+  print?: () => void;
 }
 
-export function VerifyView({ app, verify, save = saveFile }: VerifyViewProps) {
+export function VerifyView({ app, verify, save = saveFile, print }: VerifyViewProps) {
   const [text, setText] = useState("");
   const [outcome, setOutcome] = useState<VerifyOutcome | null>(null);
   const [busy, setBusy] = useState(false);
@@ -160,6 +162,7 @@ export function VerifyView({ app, verify, save = saveFile }: VerifyViewProps) {
               Download CSV
             </Button>
           </div>
+          <DeliveryReport receipt={r} hash={outcome.hash} print={print} />
         </div>
       )}
     </div>

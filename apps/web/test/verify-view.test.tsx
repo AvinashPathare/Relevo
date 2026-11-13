@@ -117,6 +117,32 @@ describe("VerifyView", () => {
     expect((screen.getByRole("button", { name: "Verify" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
+  it("shows a printable delivery report once every check passes", async () => {
+    const print = vi.fn();
+    render(<VerifyView app={app} verify={async () => passing} save={() => {}} print={print} />);
+    paste(files["valid.json"]);
+    expect(await screen.findByRole("heading", { name: "Delivery report" })).toBeTruthy();
+    expect(
+      screen.getByText(
+        "3 payouts: 2 delivered, 1 refunded to the funder. 0.40 USDC in late penalties paid to the funder.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Batch 7 · funded by dao.example.testnet · testnet")).toBeTruthy();
+    // header + 3 payouts
+    expect(screen.getAllByRole("row")).toHaveLength(4);
+    expect(screen.getByText("Refunded: account closed")).toBeTruthy();
+    expect(screen.getByText("Delivered after reroute (mx3.example.testnet missed its cut-off)")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Print report" }));
+    expect(print).toHaveBeenCalledOnce();
+  });
+
+  it("shows no delivery report when a check fails", async () => {
+    render(<VerifyView app={app} verify={async () => failing} save={() => {}} />);
+    paste(files["edited-amount.json"]);
+    await screen.findByText("Not verified: the CSV export needs every check to pass");
+    expect(screen.queryByRole("heading", { name: "Delivery report" })).toBeNull();
+  });
+
   it("carries the testnet label", () => {
     render(<VerifyView app={app} verify={async () => passing} save={() => {}} />);
     expect(
