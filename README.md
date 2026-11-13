@@ -1,4 +1,6 @@
-# Elivo Payout Guard
+<p><img src="brand/relevo-wordmark-on-cream.svg" alt="Relevo" width="260"></p>
+
+# Relevo Payout Guard
 
 [![CI](https://github.com/AvinashPathare/Relevo/actions/workflows/ci.yml/badge.svg)](https://github.com/AvinashPathare/Relevo/actions/workflows/ci.yml)
 

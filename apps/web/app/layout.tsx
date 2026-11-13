@@ -4,10 +4,11 @@ import "@fontsource/jetbrains-mono/500.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Banner } from "../components/Banner.tsx";
+import { Logo } from "../components/Logo.tsx";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Elivo Payout Guard",
+  title: "Relevo Payout Guard",
   description: "Testnet prototype. Payout firms and SPEI receipts are simulated. Contract unaudited.",
 };
 
@@ -23,21 +24,6 @@ function network(): string | null {
   }
 }
 
-function Glyph() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
-      <path d="M4 11a7 7 0 0 1 12.1-4.8" fill="none" stroke="#17152b" strokeWidth="3" strokeLinecap="round" />
-      <path
-        d="M18 11a7 7 0 0 1-12.1 4.8"
-        fill="none"
-        stroke="#5b45d6"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 export default function RootLayout({ children }: { children: ReactNode }) {
   const net = network();
   return (
@@ -47,8 +33,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <Banner />
           <nav className="nav">
             <a className="brand" href="/">
-              <Glyph />
-              <span>Elivo Payout Guard</span>
+              <Logo />
+              <span>Payout Guard</span>
             </a>
             <div className="nav-links">
               <a href="/new">New batch</a>

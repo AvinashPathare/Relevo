@@ -24,7 +24,7 @@ const say = (msg: string) => console.log(`${String(++step).padStart(2)}. ${msg}`
 const note = (msg: string) => console.log(`      ${msg}`);
 
 async function main() {
-  console.log(`\nElivo Payout Guard — demo on ${network}\n${LABEL}\n`);
+  console.log(`\nRelevo Payout Guard — demo on ${network}\n${LABEL}\n`);
   const s = network === "testnet" ? await setupTestnet(note) : await setupSandbox();
   onStop(s.stop);
   const { chain, d, keys } = s;

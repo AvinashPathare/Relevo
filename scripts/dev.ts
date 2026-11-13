@@ -37,7 +37,7 @@ function startWeb(webEnv: Record<string, string>) {
 }
 
 async function main() {
-  console.log(`\nElivo Payout Guard — web app on ${network}${readOnly ? " (read-only)" : ""}\n${LABEL}\n`);
+  console.log(`\nRelevo Payout Guard — web app on ${network}${readOnly ? " (read-only)" : ""}\n${LABEL}\n`);
   if (readOnly) {
     const depFile = resolve("deployments/testnet.json");
     const d = loadDeployment(depFile);

@@ -1,4 +1,4 @@
-# Elivo Payout Guard — testnet prototype. Payout firms and SPEI receipts are simulated. Contract unaudited.
+# Relevo Payout Guard — testnet prototype. Payout firms and SPEI receipts are simulated. Contract unaudited.
 SHELL := /bin/bash
 CARGO ?= $(shell command -v cargo 2>/dev/null || echo $(HOME)/.cargo/bin/cargo)
 RES := contracts/res
