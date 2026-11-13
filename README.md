@@ -2,7 +2,7 @@
 
 # Relevo Payout Guard
 
-[![CI](https://github.com/AvinashPathare/Relevo/actions/workflows/ci.yml/badge.svg)](https://github.com/AvinashPathare/Relevo/actions/workflows/ci.yml)
+[![CI](https://github.com/elixirlabs-dev/Relevo/actions/workflows/ci.yml/badge.svg)](https://github.com/elixirlabs-dev/Relevo/actions/workflows/ci.yml)
 
 > **Testnet prototype. Payout firms and SPEI receipts are simulated. Contract unaudited.**
 > Not a money transmitter and not a live service.

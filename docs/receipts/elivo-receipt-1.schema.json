@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/AvinashPathare/Relevo/blob/main/docs/receipts/elivo-receipt-1.schema.json",
+  "$id": "https://github.com/elixirlabs-dev/Relevo/blob/main/docs/receipts/elivo-receipt-1.schema.json",
   "title": "Elivo payout batch receipt, version elivo-receipt-1",
   "description": "Testnet prototype. Payout firms and SPEI receipts are simulated. Contract unaudited. A signed record of one funded batch: every payout, the firms that held it, penalties, and transaction hashes. Amounts are USDC base units (6 decimals) as decimal strings.",
   "type": "object",
