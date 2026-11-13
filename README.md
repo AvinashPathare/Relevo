@@ -17,6 +17,24 @@ A DAO votes once to pay a batch of contributors in Mexico. The USDC locks in a N
 
 The receipt comes first; the escrow and bonds are the stronger level on top of it (see the product ladder in [docs/production-readiness.md](docs/production-readiness.md)).
 
+## Try it
+
+No keys, accounts or funds are needed.
+
+1. **See a finished batch on chain.** The reference run (batch 5) is on NEAR testnet. Every step, from the DAO vote to the anchored receipt, is linked in [Reference run, step by step](#reference-run-step-by-step).
+2. **Verify its receipt in your browser.**
+
+   ```bash
+   git clone https://github.com/elixirlabs-dev/Relevo.git && cd Relevo
+   pnpm install
+   pnpm web:testnet   # read-only; reads NEAR testnet, signs nothing
+   ```
+
+   Open http://localhost:3000/verify and choose "Use the testnet reference receipt (batch 5)". Four checks run in your browser, and all four pass.
+3. **Tamper with it.** Download the [reference receipt](apps/web/public/receipts/testnet-batch-5.json), change any amount, and upload it on the same page. The signature check fails.
+
+The same site shows the batch straight from the contract at http://localhost:3000/chain/5 and each firm's bond and record at http://localhost:3000/firms.
+
 ## What is real and what is simulated
 
 | Part | Status |
@@ -161,6 +179,37 @@ What the tests pin down:
 
 ## Architecture
 
+The life of one batch:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant F as Funder (Sputnik DAO)
+    participant E as Escrow contract
+    participant R as Router
+    participant P as Payout firms (simulated)
+    participant O as Proof oracle (simulated)
+    F->>E: One vote locks the batch (ft_transfer_call)
+    R->>E: Assign each payout to a bonded firm
+    R->>P: Payout order (names and CLABEs stay off-chain)
+    P->>O: Delivery report
+    O-->>R: Signed proof or signed exclusion
+    alt Delivered on time
+        R->>E: Settle with the proof
+        E->>P: USDC released to the firm
+    else Firm misses its cut-off
+        R->>E: Reroute to the next firm
+        E->>F: Penalty from the late firm's bond
+    else Account closed
+        R->>E: Exclude, then refund
+        E->>F: Full refund, no penalty
+    end
+    R->>E: Anchor the hash of the signed receipt
+    Note over F,E: Anyone can check the receipt against the chain at /verify
+```
+
+The components and who can call what:
+
 ```
  web app (Next.js): CSV upload, quote, propose & vote, status ── reads contract views via RPC
    │
@@ -206,6 +255,21 @@ Demo mode: one penalty period is 10 s.
 | DAO (Sputnik v2) | [elivo-1794414333.sputnikv2.testnet](https://testnet.nearblocks.io/address/elivo-1794414333.sputnikv2.testnet) |
 | Reference run | Batch 5, receipt anchored in [2qeoXKVn…](https://testnet.nearblocks.io/txns/2qeoXKVnS28WxkdEy5kaAb7CRbk5jRviq2Lq2BavWg3M) |
 
+### Reference run, step by step
+
+Batch 5 locked 9,022.50 mUSDC for five payouts. These are its transactions on testnet (payouts 1 and 4 followed the same path as payout 0):
+
+| Step | What happened | Transaction |
+|---|---|---|
+| Fund | The council's vote executes the DAO proposal, and 9,022.50 mUSDC moves from the DAO to the escrow. | [ATTMEjgW…](https://testnet.nearblocks.io/txns/ATTMEjgW7cF5iXxHiyFSXSpxSpTZ2bY1aLTFgjGBfVd7) |
+| Assign | Payout 0 (2,000 mUSDC) is assigned to MX-3. | [7ZMrTDML…](https://testnet.nearblocks.io/txns/7ZMrTDMLxQwuGHa8MtxMEh4SCenXKAdNs3XgpFVq83Sz) |
+| Reroute and penalty | MX-3 misses its cut-off. Payout 0 moves to MX-2, and 0.40 mUSDC from MX-3's bond goes to the DAO. | [E6yYwDQ2…](https://testnet.nearblocks.io/txns/E6yYwDQ2J3C7qtFaMLKUgiqzcV1KQDbTjRP6fRj9e5yw) |
+| Settle | MX-2 delivers payout 0, and the escrow releases the funds against the signed proof. | [3xVfGvAg…](https://testnet.nearblocks.io/txns/3xVfGvAgoaSyVsP7AikGSVf6RcPUXZkwfguoej3Nb3H8) |
+| On-time delivery | Payout 3 (2,500 mUSDC) is settled with MX-2 before its cut-off, with no penalty. | [B1KEzopQ…](https://testnet.nearblocks.io/txns/B1KEzopQMw4kGwSbuEF9VS9jdttRujvDFG5wnJs7BMgs) |
+| Exclude | Payout 2's account is closed, and the oracle's signed exclusion is recorded. | [GyKXiBNr…](https://testnet.nearblocks.io/txns/GyKXiBNrBL7T9w8WiiskeYQuihGBynmt1uJhuUix4W1X) |
+| Refund | Payout 2 (1,500 mUSDC) returns to the DAO in full, with no penalty to anyone. | [ARVbCvHZ…](https://testnet.nearblocks.io/txns/ARVbCvHZGmukRtciDJyMTy18985pArnpJP2fCKf3Zke2) |
+| Anchor | The hash of the signed receipt is stored in the escrow. | [2qeoXKVn…](https://testnet.nearblocks.io/txns/2qeoXKVnS28WxkdEy5kaAb7CRbk5jRviq2Lq2BavWg3M) |
+
 Batches 0–3 were development runs; their open payouts were refunded to the DAO. Batch 2's anchored hash came from a receipt that changed after signing (a bug since fixed), so it does not verify. Batch 4 is a complete run from before the final review fixes, and batch 5 is the reference.
 
 ## Tracks entered and why
@@ -225,6 +289,12 @@ What stands between this prototype and production, what to improve next, and whe
 - Pay-in through 1Click for real (today the app shows a dry quote only).
 - More wallets in the web app (MyNearWallet only today).
 - An audit before any real funds.
+
+Further out:
+
+- **Receipts for payouts made on any rail.** A provider pays as it does today and issues the same signed, anchored receipt, with no escrow involved.
+- **Delivery checked against the bank's record.** In Mexico that is the CEP, the electronic payment receipt issued by Banxico for a SPEI transfer. It replaces the simulated oracle's word.
+- **Post-quantum receipts.** A second signature (ML-DSA-65, FIPS 204) beside Ed25519 in an `elivo-receipt-2` format, so a receipt kept for years can still be checked. The on-chain hash does not change. NEAR's protocol added ML-DSA-65 account keys in 2026.
 
 ## Disclosures
 
